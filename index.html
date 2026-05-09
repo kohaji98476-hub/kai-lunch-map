@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#FF6B35">
+<title>KAI Lunch Map</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Helvetica Neue', Arial, sans-serif; background: #f5f5f5; height: 100vh; display: flex; flex-direction: column; }
+
+  #header {
+    background: #FF6B35; color: white; padding: 12px 16px;
+    display: flex; align-items: center; justify-content: space-between;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2); z-index: 100;
+  }
+  #header h1 { font-size: 18px; font-weight: 700; }
+  #mode-toggle { display: flex; background: rgba(255,255,255,0.2); border-radius: 20px; padding: 3px; }
+  .mode-btn {
+    padding: 5px 14px; border-radius: 17px; border: none; cursor: pointer;
+    font-size: 13px; font-weight: 600; transition: all 0.2s;
+    background: transparent; color: white;
+  }
+  .mode-btn.active { background: white; color: #FF6B35; }
+
+  #map { flex: 1; width: 100%; }
+
+  /* Google Maps InfoWindow カスタム */
+  .info-window-content {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    padding: 4px 6px;
+  }
+  .info-window-content .shop-name {
+    font-size: 14px; font-weight: 700; color: #333;
+  }
+  .info-window-content .shop-hint {
+    font-size: 11px; color: #FF6B35; margin-top: 2px;
+  }
+
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+    z-index: 1000; align-items: flex-end; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: white; border-radius: 20px 20px 0 0; width: 100%; max-width: 600px;
+    max-height: 85vh; overflow-y: auto; padding: 0;
+    animation: slideUp 0.3s ease;
+  }
+  @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+  /* モーダルヘッダー */
+  .modal-header {
+    background: #FF6B35; border-radius: 20px 20px 0 0;
+    padding: 16px 24px 14px; position: relative;
+  }
+  .modal-handle {
+    width: 40px; height: 4px; background: rgba(255,255,255,0.4);
+    border-radius: 2px; margin: 0 auto 12px;
+  }
+  .modal-header .shop-name {
+    font-size: 18px; font-weight: 700; color: white;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .modal-header .shop-address {
+    font-size: 12px; color: rgba(255,255,255,0.8); margin-top: 3px;
+  }
+
+  .modal-body { padding: 20px 24px 24px; }
+
+  .name-input-wrap { margin-bottom: 20px; }
+  .name-input-wrap label { font-size: 14px; color: #444; font-weight: 600; display: block; margin-bottom: 10px; }
+  .name-input-wrap input {
+    width: 100%; padding: 12px 16px; border: 1.5px solid #ddd; border-radius: 12px;
+    font-size: 16px; outline: none; transition: border-color 0.2s;
+  }
+  .name-input-wrap input:focus { border-color: #FF6B35; }
+
+  /* 名前入力モーダルは白ヘッダー */
+  .modal-header-simple {
+    padding: 20px 24px 0;
+  }
+  .modal-header-simple .modal-handle {
+    background: #ddd; margin-bottom: 16px;
+  }
+  .modal-header-simple h2 { font-size: 18px; color: #333; font-weight: 700; margin-bottom: 6px; }
+  .modal-header-simple p { font-size: 13px; color: #888; margin-bottom: 0; }
+
+  .primary-btn {
+    width: 100%; padding: 14px; background: #FF6B35; color: white;
+    border: none; border-radius: 12px; font-size: 16px; font-weight: 700;
+    cursor: pointer; transition: background 0.2s;
+  }
+  .primary-btn:hover { background: #e55a25; }
+  .primary-btn:disabled { background: #ccc; cursor: not-allowed; }
+  .cancel-btn {
+    width: 100%; padding: 12px; background: #f0f0f0; color: #444;
+    border: none; border-radius: 12px; font-size: 15px; font-weight: 600;
+    cursor: pointer; margin-top: 10px;
+  }
+
+  .rating-item { margin-bottom: 16px; }
+  .rating-item label { font-size: 14px; color: #444; font-weight: 600; display: block; margin-bottom: 8px; }
+  .stars { display: flex; gap: 6px; }
+  .star {
+    font-size: 28px; cursor: pointer; transition: transform 0.1s;
+    filter: grayscale(1); opacity: 0.3;
+  }
+  .star.active { filter: none; opacity: 1; }
+  .star:hover { transform: scale(1.2); }
+
+  .walk-item { margin-bottom: 16px; }
+  .walk-item label { font-size: 14px; color: #444; font-weight: 600; display: block; margin-bottom: 8px; }
+  .walk-input-row { display: flex; align-items: center; gap: 10px; }
+  .walk-input-row input[type=number] {
+    width: 90px; padding: 10px 12px; border: 1.5px solid #ddd; border-radius: 12px;
+    font-size: 20px; font-weight: 700; color: #FF6B35; text-align: center; outline: none;
+  }
+  .walk-input-row input[type=number]:focus { border-color: #FF6B35; }
+  .walk-unit { font-size: 14px; color: #666; }
+  .walk-auto-badge {
+    font-size: 11px; color: #888; background: #f0f0f0;
+    border-radius: 10px; padding: 2px 8px;
+  }
+
+  .edit-badge {
+    display: inline-block; background: rgba(255,255,255,0.2); color: white;
+    border: 1px solid rgba(255,255,255,0.4); border-radius: 20px;
+    font-size: 11px; font-weight: 600; padding: 2px 10px; margin-top: 6px;
+  }
+
+  .avg-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 0; border-bottom: 1px solid #f0f0f0;
+  }
+  .avg-item:last-child { border-bottom: none; }
+  .avg-label { font-size: 14px; color: #444; }
+  .avg-score { display: flex; align-items: center; gap: 8px; }
+  .avg-num { font-size: 14px; font-weight: 700; color: #FF6B35; }
+
+  .user-reviews { margin-top: 16px; }
+  .user-reviews h3 { font-size: 14px; color: #888; margin-bottom: 12px; font-weight: 600; }
+  .user-review-card {
+    background: #f9f9f9; border-radius: 12px; padding: 12px; margin-bottom: 10px;
+  }
+  .user-review-card .reviewer { font-size: 13px; font-weight: 700; color: #333; margin-bottom: 8px; }
+  .user-review-item { display: flex; justify-content: space-between; font-size: 12px; color: #666; margin-bottom: 4px; }
+  .no-reviews { text-align: center; color: #aaa; font-size: 14px; padding: 20px 0; }
+
+  #register-hint {
+    display: none; background: #FFF3EE; border-top: 2px solid #FFD5C2;
+    padding: 10px 16px; text-align: center; font-size: 13px; color: #FF6B35; font-weight: 600;
+  }
+  #register-hint.show { display: block; }
+
+  #user-badge {
+    display: none; position: fixed; bottom: 20px; right: 16px;
+    background: white; border-radius: 20px; padding: 7px 14px;
+    font-size: 13px; color: #555; font-weight: 600;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.15); z-index: 400;
+  }
+  #user-badge.show { display: block; }
+
+  #toast {
+    position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+    background: #333; color: white; padding: 10px 20px; border-radius: 20px;
+    font-size: 14px; z-index: 2000; opacity: 0; transition: opacity 0.3s;
+    pointer-events: none; white-space: nowrap;
+  }
+  #toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <h1>🍱 KAI Lunch Map</h1>
+  <div id="mode-toggle">
+    <button class="mode-btn active" id="btn-view" onclick="setMode('view')">閲覧</button>
+    <button class="mode-btn" id="btn-register" onclick="setMode('register')">登録</button>
+  </div>
+</div>
+
+<div id="map"></div>
+<div id="register-hint">📍 お店のアイコンをクリックして評価を登録・修正してください</div>
+<div id="user-badge"></div>
+
+<!-- ① 名前入力モーダル -->
+<div class="modal-overlay" id="name-modal">
+  <div class="modal">
+    <div class="modal-header-simple">
+      <div class="modal-handle"></div>
+      <h2>👤 名前を入力</h2>
+      <p>評価に表示される名前を入力してください</p>
+    </div>
+    <div class="modal-body">
+      <div class="name-input-wrap" style="margin-top:16px;">
+        <label>ユーザー名</label>
+        <input id="user-name-input" type="text" placeholder="例：田中" maxlength="20" />
+      </div>
+      <button class="primary-btn" onclick="confirmName()">次へ → お店を選ぶ</button>
+      <button class="cancel-btn" onclick="cancelName()">キャンセル</button>
+    </div>
+  </div>
+</div>
+
+<!-- ② 評価登録・修正モーダル -->
+<div class="modal-overlay" id="register-modal">
+  <div class="modal">
+    <div class="modal-header" id="reg-modal-header">
+      <div class="modal-handle"></div>
+      <div class="shop-name" id="reg-shop-name"></div>
+      <div class="shop-address" id="reg-shop-address"></div>
+      <div id="edit-badge-wrap"></div>
+    </div>
+    <div class="modal-body">
+      <div id="rating-section"></div>
+      <button class="primary-btn" id="submit-btn" onclick="submitReview()">登録する</button>
+      <button class="cancel-btn" onclick="closeRegisterModal()">キャンセル</button>
+    </div>
+  </div>
+</div>
+
+<!-- ③ 閲覧モーダル -->
+<div class="modal-overlay" id="view-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-handle"></div>
+      <div class="shop-name" id="view-shop-name"></div>
+      <div class="shop-address" id="view-shop-address"></div>
+    </div>
+    <div class="modal-body">
+      <div id="avg-section"></div>
+      <div class="user-reviews">
+        <h3>メンバーの評価</h3>
+        <div id="user-reviews-list"></div>
+      </div>
+      <button class="cancel-btn" onclick="closeViewModal()">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getFirestore, collection, addDoc, getDocs, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCHIxKeZr_iA_K9XSSgteZjez7TnZIk1CM",
+    authDomain: "kai-lunch-map-d16d0.firebaseapp.com",
+    projectId: "kai-lunch-map-d16d0",
+    storageBucket: "kai-lunch-map-d16d0.firebasestorage.app",
+    messagingSenderId: "107069095031",
+    appId: "1:107069095031:web:0a107a881ae79b63dcda72",
+    measurementId: "G-QKDTNG59CN"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  window._db = db;
+  window._fbFns = { collection, addDoc, getDocs, doc, updateDoc };
+</script>
+
+<script>
+const OFFICE_LAT = 35.6969;
+const OFFICE_LNG = 139.7782;
+
+const RATING_ITEMS = [
+  { key: 'taste',   label: '🍜 味' },
+  { key: 'speed',   label: '⏱️ 提供時間' },
+  { key: 'value',   label: '💰 コスパ' },
+  { key: 'crowded', label: '🪑 混雑度' },
+];
+
+let map, mode = 'view', markers = [], selectedPlace = null, ratings = {};
+let currentUserName = '', existingReviewId = null, allReviews = [];
+let infoWindow = null; // 地図上のポップアップ
+
+function calcDistance(lat1, lng1, lat2, lng2) {
+  const R = 6371000;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 +
+            Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+function calcWalkMin(lat, lng) {
+  return Math.round(calcDistance(OFFICE_LAT, OFFICE_LNG, lat, lng) * 1.3 / 80);
+}
+
+function setMode(m) {
+  mode = m;
+  document.getElementById('btn-view').classList.toggle('active', m === 'view');
+  document.getElementById('btn-register').classList.toggle('active', m === 'register');
+  if (infoWindow) infoWindow.close();
+  if (m === 'register') {
+    document.getElementById('user-name-input').value = currentUserName;
+    document.getElementById('name-modal').classList.add('open');
+  } else {
+    document.getElementById('register-hint').classList.remove('show');
+    document.getElementById('user-badge').classList.remove('show');
+    loadAndShowMarkers();
+  }
+}
+
+function confirmName() {
+  const name = document.getElementById('user-name-input').value.trim();
+  if (!name) { showToast('名前を入力してください'); return; }
+  currentUserName = name;
+  document.getElementById('name-modal').classList.remove('open');
+  document.getElementById('register-hint').classList.add('show');
+  document.getElementById('user-badge').textContent = `👤 ${currentUserName}`;
+  document.getElementById('user-badge').classList.add('show');
+}
+
+function cancelName() {
+  document.getElementById('name-modal').classList.remove('open');
+  mode = 'view';
+  document.getElementById('btn-view').classList.add('active');
+  document.getElementById('btn-register').classList.remove('active');
+}
+
+window.initMap = async function() {
+  const { Map, InfoWindow } = await google.maps.importLibrary("maps");
+  await google.maps.importLibrary("places");
+
+  map = new Map(document.getElementById('map'), {
+    center: { lat: OFFICE_LAT, lng: OFFICE_LNG },
+    zoom: 17,
+    mapTypeControl: false,
+    streetViewControl: false,
+    fullscreenControl: false,
+    clickableIcons: true,
+  });
+
+  infoWindow = new InfoWindow();
+
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(pos => {
+      map.setCenter({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+    });
+  }
+
+  // 地図上のGoogle Mapsスポットクリック（未登録のお店）
+  map.addListener('click', async (e) => {
+    if (mode !== 'register') return;
+    if (!e.placeId) { showToast('お店のアイコンをクリックしてください'); return; }
+    e.stop();
+
+    try {
+      const svc = new google.maps.places.PlacesService(map);
+      svc.getDetails(
+        { placeId: e.placeId, fields: ['name', 'formatted_address', 'geometry'] },
+        (place, status) => {
+          if (status === google.maps.places.PlacesServiceStatus.OK) {
+            selectedPlace = {
+              placeId: e.placeId, name: place.name,
+              address: place.formatted_address || '',
+              lat: place.geometry.location.lat(), lng: place.geometry.location.lng()
+            };
+          } else {
+            selectedPlace = {
+              placeId: e.placeId, name: '登録店舗', address: '',
+              lat: e.latLng.lat(), lng: e.latLng.lng()
+            };
+          }
+          openRegisterModal();
+        }
+      );
+    } catch {
+      selectedPlace = {
+        placeId: e.placeId, name: '登録店舗', address: '',
+        lat: e.latLng.lat(), lng: e.latLng.lng()
+      };
+      openRegisterModal();
+    }
+  });
+
+  // 地図クリックでInfoWindow閉じる
+  map.addListener('click', () => { infoWindow.close(); });
+
+  await loadAndShowMarkers();
+}
+
+async function loadAndShowMarkers() {
+  if (!window._db) return;
+  const { collection, getDocs } = window._fbFns;
+  const snap = await getDocs(collection(window._db, 'reviews'));
+  allReviews = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+  const grouped = {};
+  allReviews.forEach(r => {
+    if (!grouped[r.placeId]) grouped[r.placeId] = {
+      name: r.shopName, address: r.shopAddress,
+      lat: r.lat, lng: r.lng, reviews: []
+    };
+    grouped[r.placeId].reviews.push(r);
+  });
+
+  markers.forEach(m => m.setMap(null));
+  markers = [];
+
+  for (const [placeId, data] of Object.entries(grouped)) {
+    // ラベル付きマーカー（名前をピンの下に表示）
+    const marker = new google.maps.Marker({
+      position: { lat: data.lat, lng: data.lng },
+      map,
+      title: data.name,
+      label: {
+        text: data.name,
+        color: '#333',
+        fontSize: '11px',
+        fontWeight: '600',
+        className: 'marker-label',
+      },
+      icon: {
+        url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+          <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
+            <circle cx="20" cy="20" r="18" fill="#FF6B35" stroke="white" stroke-width="3"/>
+            <text x="20" y="26" text-anchor="middle" font-size="18">🍱</text>
+          </svg>`),
+        scaledSize: new google.maps.Size(40, 40),
+        labelOrigin: new google.maps.Point(20, 52),
+      }
+    });
+
+    marker.addListener('click', () => {
+      // InfoWindowでお店名をポップアップ表示
+      const hint = mode === 'view'
+        ? 'タップして評価を確認'
+        : 'タップして評価を登録・修正';
+      infoWindow.setContent(`
+        <div class="info-window-content">
+          <div class="shop-name">${data.name}</div>
+          <div class="shop-hint">${hint}</div>
+        </div>`);
+      infoWindow.open(map, marker);
+
+      // 少し待ってからモーダルを開く（InfoWindowを一瞬見せる）
+      setTimeout(() => {
+        infoWindow.close();
+        if (mode === 'view') {
+          openViewModal(placeId, data);
+        } else {
+          selectedPlace = { placeId, name: data.name, address: data.address, lat: data.lat, lng: data.lng };
+          openRegisterModal();
+        }
+      }, 600);
+    });
+
+    markers.push(marker);
+  }
+}
+
+function openRegisterModal() {
+  const existing = allReviews.find(
+    r => r.placeId === selectedPlace.placeId && r.userName === currentUserName
+  );
+  existingReviewId = existing ? existing.id : null;
+  ratings = {};
+
+  const autoWalkMin = calcWalkMin(selectedPlace.lat, selectedPlace.lng);
+  const walkMin = existing?.walkMin ?? autoWalkMin;
+
+  const section = document.getElementById('rating-section');
+  section.innerHTML = '';
+
+  RATING_ITEMS.forEach(item => {
+    const preVal = existing ? (existing.ratings[item.key] || 0) : 0;
+    ratings[item.key] = preVal;
+    const div = document.createElement('div');
+    div.className = 'rating-item';
+    div.innerHTML = `
+      <label>${item.label}</label>
+      <div class="stars" id="stars-${item.key}">
+        ${[1,2,3,4,5].map(i =>
+          `<span class="star${i <= preVal ? ' active' : ''}" onclick="setStar('${item.key}',${i})">⭐</span>`
+        ).join('')}
+      </div>`;
+    section.appendChild(div);
+  });
+
+  const walkDiv = document.createElement('div');
+  walkDiv.className = 'walk-item';
+  walkDiv.innerHTML = `
+    <label>🚶 徒歩時間 <span class="walk-auto-badge">自動計算済み・修正可</span></label>
+    <div class="walk-input-row">
+      <input type="number" id="walk-min-input" value="${walkMin}" min="1" max="60" />
+      <span class="walk-unit">分</span>
+    </div>`;
+  section.appendChild(walkDiv);
+
+  document.getElementById('reg-shop-name').textContent = selectedPlace.name;
+  document.getElementById('reg-shop-address').textContent = selectedPlace.address;
+  document.getElementById('edit-badge-wrap').innerHTML = existing
+    ? `<span class="edit-badge">✏️ 過去の評価を修正中</span>` : '';
+  document.getElementById('submit-btn').textContent = existing ? '修正を保存する' : '登録する';
+  document.getElementById('register-modal').classList.add('open');
+}
+
+function closeRegisterModal() {
+  document.getElementById('register-modal').classList.remove('open');
+}
+
+function setStar(key, val) {
+  ratings[key] = val;
+  document.querySelectorAll(`#stars-${key} .star`)
+    .forEach((s, i) => s.classList.toggle('active', i < val));
+}
+
+async function submitReview() {
+  const allRated = RATING_ITEMS.every(i => ratings[i.key] > 0);
+  if (!allRated) { showToast('全項目を評価してください'); return; }
+
+  const walkMin = parseInt(document.getElementById('walk-min-input').value) || 1;
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true; btn.textContent = '保存中...';
+
+  const { collection, addDoc, doc, updateDoc } = window._fbFns;
+  const isEdit = !!existingReviewId;
+
+  if (isEdit) {
+    await updateDoc(doc(window._db, 'reviews', existingReviewId), {
+      ratings, walkMin, updatedAt: new Date().toISOString()
+    });
+  } else {
+    await addDoc(collection(window._db, 'reviews'), {
+      placeId: selectedPlace.placeId,
+      shopName: selectedPlace.name, shopAddress: selectedPlace.address,
+      lat: selectedPlace.lat, lng: selectedPlace.lng,
+      userName: currentUserName, ratings, walkMin,
+      createdAt: new Date().toISOString()
+    });
+  }
+
+  btn.disabled = false;
+  document.getElementById('register-modal').classList.remove('open');
+  document.getElementById('register-hint').classList.remove('show');
+  document.getElementById('user-badge').classList.remove('show');
+  mode = 'view';
+  document.getElementById('btn-view').classList.add('active');
+  document.getElementById('btn-register').classList.remove('active');
+
+  showToast(isEdit ? '✅ 修正しました！' : '✅ 登録しました！');
+  existingReviewId = null;
+  await loadAndShowMarkers();
+}
+
+function openViewModal(placeId, data) {
+  document.getElementById('view-shop-name').textContent = data.name;
+  document.getElementById('view-shop-address').textContent = data.address;
+
+  const avgSection = document.getElementById('avg-section');
+  avgSection.innerHTML = '';
+
+  RATING_ITEMS.forEach(item => {
+    const vals = data.reviews.map(r => r.ratings[item.key]).filter(Boolean);
+    const avg = vals.length ? (vals.reduce((a,b) => a+b, 0) / vals.length) : 0;
+    const filled = Math.round(avg);
+    avgSection.innerHTML += `
+      <div class="avg-item">
+        <span class="avg-label">${item.label}</span>
+        <div class="avg-score">
+          <span>${'⭐'.repeat(filled)}${'☆'.repeat(5-filled)}</span>
+          <span class="avg-num">${avg.toFixed(1)}</span>
+        </div>
+      </div>`;
+  });
+
+  const walkVals = data.reviews.map(r => r.walkMin).filter(Boolean);
+  const avgWalk = walkVals.length ? Math.round(walkVals.reduce((a,b) => a+b, 0) / walkVals.length) : null;
+  avgSection.innerHTML += `
+    <div class="avg-item">
+      <span class="avg-label">🚶 徒歩時間</span>
+      <div class="avg-score">
+        <span class="avg-num">${avgWalk !== null ? `約${avgWalk}分` : '-'}</span>
+      </div>
+    </div>`;
+
+  const list = document.getElementById('user-reviews-list');
+  list.innerHTML = data.reviews.length === 0
+    ? '<p class="no-reviews">まだ評価がありません</p>'
+    : data.reviews.map(r => `
+      <div class="user-review-card">
+        <div class="reviewer">👤 ${r.userName}</div>
+        ${RATING_ITEMS.map(item => `
+          <div class="user-review-item">
+            <span>${item.label}</span>
+            <span>${'⭐'.repeat(r.ratings[item.key]||0)}${'☆'.repeat(5-(r.ratings[item.key]||0))}</span>
+          </div>`).join('')}
+        <div class="user-review-item">
+          <span>🚶 徒歩時間</span>
+          <span>${r.walkMin ? `約${r.walkMin}分` : '-'}</span>
+        </div>
+      </div>`).join('');
+
+  document.getElementById('view-modal').classList.add('open');
+}
+
+function closeViewModal() {
+  document.getElementById('view-modal').classList.remove('open');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
+});
+</script>
+
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBp-ufjhkc9R3Fls-tRoGlXMAAsWGCzuxU&libraries=places&callback=initMap&loading=async" async defer></script>
+</body>
+</html>

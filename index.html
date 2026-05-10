@@ -25,7 +25,6 @@
 
   #map { flex: 1; width: 100%; }
 
-  /* 現在地ボタン */
   #locate-btn {
     position: fixed; bottom: 30px; left: 16px;
     background: white; border: none; border-radius: 50%;
@@ -34,7 +33,6 @@
     cursor: pointer; z-index: 400;
     display: flex; align-items: center; justify-content: center;
   }
-  #locate-btn:hover { background: #f5f5f5; }
 
   .modal-overlay {
     display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5);
@@ -43,46 +41,44 @@
   .modal-overlay.open { display: flex; }
   .modal {
     background: white; border-radius: 20px 20px 0 0; width: 100%; max-width: 600px;
-    max-height: 85vh; overflow-y: auto; padding: 0;
+    max-height: 90vh; overflow-y: auto; padding: 0;
     animation: slideUp 0.3s ease;
   }
   @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 
   .modal-header {
     background: #FF6B35; border-radius: 20px 20px 0 0;
-    padding: 16px 24px 14px;
+    padding: 16px 24px 14px; position: sticky; top: 0; z-index: 10;
   }
-  .modal-handle {
-    width: 40px; height: 4px; background: rgba(255,255,255,0.4);
-    border-radius: 2px; margin: 0 auto 12px;
-  }
-  .modal-header .shop-name {
-    font-size: 18px; font-weight: 700; color: white;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
+  .modal-handle { width: 40px; height: 4px; background: rgba(255,255,255,0.4); border-radius: 2px; margin: 0 auto 12px; }
+  .modal-header .shop-name { font-size: 18px; font-weight: 700; color: white; }
   .modal-header .shop-address { font-size: 12px; color: rgba(255,255,255,0.8); margin-top: 3px; }
+  .modal-header .genre-tags { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 4px; }
+  .genre-tag-display {
+    background: rgba(255,255,255,0.25); color: white;
+    border-radius: 10px; font-size: 11px; padding: 2px 8px;
+  }
 
   .modal-body { padding: 20px 24px 24px; }
-
-  .name-input-wrap { margin-bottom: 20px; }
-  .name-input-wrap label { font-size: 14px; color: #444; font-weight: 600; display: block; margin-bottom: 10px; }
-  .name-input-wrap input {
-    width: 100%; padding: 12px 16px; border: 1.5px solid #ddd; border-radius: 12px;
-    font-size: 16px; outline: none; transition: border-color 0.2s;
-  }
-  .name-input-wrap input:focus { border-color: #FF6B35; }
 
   .modal-header-simple { padding: 20px 24px 0; }
   .modal-header-simple .modal-handle { background: #ddd; margin-bottom: 16px; }
   .modal-header-simple h2 { font-size: 18px; color: #333; font-weight: 700; margin-bottom: 6px; }
   .modal-header-simple p { font-size: 13px; color: #888; }
 
+  .name-input-wrap { margin-bottom: 20px; }
+  .name-input-wrap label { font-size: 14px; color: #444; font-weight: 600; display: block; margin-bottom: 10px; }
+  .name-input-wrap input {
+    width: 100%; padding: 12px 16px; border: 1.5px solid #ddd; border-radius: 12px;
+    font-size: 16px; outline: none;
+  }
+  .name-input-wrap input:focus { border-color: #FF6B35; }
+
   .primary-btn {
     width: 100%; padding: 14px; background: #FF6B35; color: white;
     border: none; border-radius: 12px; font-size: 16px; font-weight: 700;
-    cursor: pointer; transition: background 0.2s;
+    cursor: pointer;
   }
-  .primary-btn:hover { background: #e55a25; }
   .primary-btn:disabled { background: #ccc; cursor: not-allowed; }
   .cancel-btn {
     width: 100%; padding: 12px; background: #f0f0f0; color: #444;
@@ -90,29 +86,45 @@
     cursor: pointer; margin-top: 10px;
   }
 
-  .rating-item { margin-bottom: 16px; }
-  .rating-item label { font-size: 14px; color: #444; font-weight: 600; display: block; margin-bottom: 8px; }
-  .stars { display: flex; gap: 6px; }
-  .star {
-    font-size: 28px; cursor: pointer; transition: transform 0.1s;
-    filter: grayscale(1); opacity: 0.3;
-  }
-  .star.active { filter: none; opacity: 1; }
-  .star:hover { transform: scale(1.2); }
+  /* 半星評価 */
+  .rating-item { margin-bottom: 20px; }
+  .rating-item label { font-size: 14px; color: #444; font-weight: 600; display: block; margin-bottom: 6px; }
+  .rating-score-display { font-size: 13px; color: #FF6B35; font-weight: 700; margin-bottom: 6px; }
+  .half-stars { display: flex; gap: 2px; position: relative; }
+  .star-wrap { position: relative; width: 32px; height: 32px; cursor: pointer; }
+  .star-wrap .star-bg { position: absolute; font-size: 28px; color: #ddd; user-select: none; }
+  .star-wrap .star-fill { position: absolute; font-size: 28px; color: #FF6B35; overflow: hidden; width: 0%; user-select: none; transition: width 0.1s; }
 
-  .walk-item { margin-bottom: 16px; }
+  /* 徒歩時間 */
+  .walk-item { margin-bottom: 20px; }
   .walk-item label { font-size: 14px; color: #444; font-weight: 600; display: block; margin-bottom: 8px; }
   .walk-input-row { display: flex; align-items: center; gap: 10px; }
   .walk-input-row input[type=number] {
     width: 90px; padding: 10px 12px; border: 1.5px solid #ddd; border-radius: 12px;
     font-size: 20px; font-weight: 700; color: #FF6B35; text-align: center; outline: none;
   }
-  .walk-input-row input[type=number]:focus { border-color: #FF6B35; }
   .walk-unit { font-size: 14px; color: #666; }
-  .walk-auto-badge {
-    font-size: 11px; color: #888; background: #f0f0f0;
-    border-radius: 10px; padding: 2px 8px;
+  .walk-auto-badge { font-size: 11px; color: #888; background: #f0f0f0; border-radius: 10px; padding: 2px 8px; }
+
+  /* テキスト入力 */
+  .text-item { margin-bottom: 20px; }
+  .text-item label { font-size: 14px; color: #444; font-weight: 600; display: block; margin-bottom: 8px; }
+  .text-item input, .text-item textarea {
+    width: 100%; padding: 10px 14px; border: 1.5px solid #ddd; border-radius: 12px;
+    font-size: 14px; outline: none; font-family: inherit; resize: vertical;
   }
+  .text-item input:focus, .text-item textarea:focus { border-color: #FF6B35; }
+
+  /* ジャンル選択 */
+  .genre-item { margin-bottom: 20px; }
+  .genre-item label { font-size: 14px; color: #444; font-weight: 600; display: block; margin-bottom: 10px; }
+  .genre-options { display: flex; flex-wrap: wrap; gap: 8px; }
+  .genre-chip {
+    padding: 6px 14px; border-radius: 20px; border: 1.5px solid #ddd;
+    font-size: 13px; cursor: pointer; background: white; color: #555;
+    transition: all 0.15s;
+  }
+  .genre-chip.selected { background: #FF6B35; color: white; border-color: #FF6B35; }
 
   .edit-badge {
     display: inline-block; background: rgba(255,255,255,0.2); color: white;
@@ -120,6 +132,7 @@
     font-size: 11px; font-weight: 600; padding: 2px 10px; margin-top: 6px;
   }
 
+  /* 閲覧モーダル */
   .avg-item {
     display: flex; align-items: center; justify-content: space-between;
     padding: 10px 0; border-bottom: 1px solid #f0f0f0;
@@ -131,11 +144,11 @@
 
   .user-reviews { margin-top: 16px; }
   .user-reviews h3 { font-size: 14px; color: #888; margin-bottom: 12px; font-weight: 600; }
-  .user-review-card {
-    background: #f9f9f9; border-radius: 12px; padding: 12px; margin-bottom: 10px;
-  }
+  .user-review-card { background: #f9f9f9; border-radius: 12px; padding: 12px; margin-bottom: 10px; }
   .user-review-card .reviewer { font-size: 13px; font-weight: 700; color: #333; margin-bottom: 8px; }
   .user-review-item { display: flex; justify-content: space-between; font-size: 12px; color: #666; margin-bottom: 4px; }
+  .user-review-text { font-size: 12px; color: #555; margin-top: 6px; padding-top: 6px; border-top: 1px solid #eee; }
+  .user-review-text span { font-weight: 600; color: #888; }
   .no-reviews { text-align: center; color: #aaa; font-size: 14px; padding: 20px 0; }
 
   #register-hint {
@@ -159,6 +172,10 @@
     pointer-events: none; white-space: nowrap;
   }
   #toast.show { opacity: 1; }
+
+  .section-divider {
+    border: none; border-top: 1px solid #f0f0f0; margin: 4px 0 20px;
+  }
 </style>
 </head>
 <body>
@@ -172,7 +189,7 @@
 </div>
 
 <div id="map"></div>
-<button id="locate-btn" onclick="goToCurrentLocation()" title="現在地へ">📍</button>
+<button id="locate-btn" onclick="goToCurrentLocation()">📍</button>
 <div id="register-hint">📍 お店のアイコンをクリックして評価を登録・修正してください</div>
 <div id="user-badge"></div>
 
@@ -219,6 +236,7 @@
       <div class="modal-handle"></div>
       <div class="shop-name" id="view-shop-name"></div>
       <div class="shop-address" id="view-shop-address"></div>
+      <div class="genre-tags" id="view-genre-tags"></div>
     </div>
     <div class="modal-body">
       <div id="avg-section"></div>
@@ -236,7 +254,6 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getFirestore, collection, addDoc, getDocs, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
   const firebaseConfig = {
     apiKey: "AIzaSyCHIxKeZr_iA_K9XSSgteZjez7TnZIk1CM",
     authDomain: "kai-lunch-map-d16d0.firebaseapp.com",
@@ -246,7 +263,6 @@
     appId: "1:107069095031:web:0a107a881ae79b63dcda72",
     measurementId: "G-QKDTNG59CN"
   };
-
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
   window._db = db;
@@ -258,37 +274,37 @@ const OFFICE_LAT = 35.6969;
 const OFFICE_LNG = 139.7782;
 
 const RATING_ITEMS = [
-  { key: 'taste',   label: '🍜 味' },
-  { key: 'speed',   label: '⏱️ 提供時間' },
-  { key: 'value',   label: '💰 コスパ' },
-  { key: 'crowded', label: '🪑 混雑度' },
+  { key: 'taste',      label: '🍜 味' },
+  { key: 'portion',   label: '🍚 量' },
+  { key: 'price',     label: '💰 値段' },
+  { key: 'ambience',  label: '✨ 雰囲気/サービス' },
+  { key: 'speed',     label: '⏱️ 混雑度/提供速度' },
 ];
 
-let map, mode = 'view', markers = [], selectedPlace = null, ratings = {};
+const GENRES = [
+  'そば・うどん', 'アジア・エスニック', '中華料理',
+  'その他和食', '海鮮・寿司・焼き魚', '洋食', 'カレー'
+];
+
+let map, mode = 'view', markers = [], selectedPlace = null;
+let ratings = {}, selectedGenres = [];
 let currentUserName = '', existingReviewId = null, allReviews = [];
-let infoWindow = null;
-let currentLocationMarker = null; // 現在地マーカー
+let infoWindow = null, currentLocationMarker = null;
 
 function calcDistance(lat1, lng1, lat2, lng2) {
   const R = 6371000;
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLng = (lng2 - lng1) * Math.PI / 180;
-  const a = Math.sin(dLat/2)**2 +
-            Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLng/2)**2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  const dLat = (lat2-lat1)*Math.PI/180, dLng = (lng2-lng1)*Math.PI/180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
-
 function calcWalkMin(lat, lng) {
-  return Math.round(calcDistance(OFFICE_LAT, OFFICE_LNG, lat, lng) * 1.3 / 80);
+  return Math.round(calcDistance(OFFICE_LAT, OFFICE_LNG, lat, lng)*1.3/80);
 }
 
-// 現在地マーカーを表示
 function showCurrentLocation(lat, lng) {
   if (currentLocationMarker) currentLocationMarker.setMap(null);
   currentLocationMarker = new google.maps.Marker({
-    position: { lat, lng },
-    map,
-    title: '現在地',
+    position: {lat, lng}, map, title: '現在地',
     icon: {
       url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
@@ -297,24 +313,64 @@ function showCurrentLocation(lat, lng) {
         </svg>`),
       scaledSize: new google.maps.Size(24, 24),
       anchor: new google.maps.Point(12, 12),
-    },
-    zIndex: 999,
+    }, zIndex: 999,
   });
 }
 
-// 現在地へ移動ボタン
 function goToCurrentLocation() {
   if (!navigator.geolocation) { showToast('現在地が取得できません'); return; }
-  navigator.geolocation.getCurrentPosition(
-    pos => {
-      const lat = pos.coords.latitude;
-      const lng = pos.coords.longitude;
-      map.setCenter({ lat, lng });
-      map.setZoom(17);
-      showCurrentLocation(lat, lng);
-    },
-    () => showToast('現在地の取得に失敗しました')
-  );
+  navigator.geolocation.getCurrentPosition(pos => {
+    const {latitude: lat, longitude: lng} = pos.coords;
+    map.setCenter({lat, lng}); map.setZoom(17);
+    showCurrentLocation(lat, lng);
+  }, () => showToast('現在地の取得に失敗しました'));
+}
+
+// 半星描画
+function renderHalfStars(containerId, key, currentVal) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  container.innerHTML = '';
+  for (let i = 1; i <= 5; i++) {
+    const wrap = document.createElement('div');
+    wrap.className = 'star-wrap';
+    wrap.innerHTML = `<span class="star-bg">★</span><span class="star-fill" id="sf-${key}-${i}">★</span>`;
+    // 左半分クリック → i-0.5点、右半分クリック → i点
+    wrap.addEventListener('click', (e) => {
+      const rect = wrap.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const val = x < rect.width / 2 ? i - 0.5 : i;
+      setHalfStar(key, val);
+    });
+    container.appendChild(wrap);
+  }
+  updateHalfStarDisplay(key, currentVal);
+}
+
+function updateHalfStarDisplay(key, val) {
+  ratings[key] = val;
+  const display = document.getElementById(`score-${key}`);
+  if (display) display.textContent = val > 0 ? `${val} / 10` : '未評価';
+  for (let i = 1; i <= 5; i++) {
+    const fill = document.getElementById(`sf-${key}-${i}`);
+    if (!fill) continue;
+    if (val >= i) fill.style.width = '100%';
+    else if (val >= i - 0.5) fill.style.width = '50%';
+    else fill.style.width = '0%';
+  }
+}
+
+function setHalfStar(key, val) {
+  updateHalfStarDisplay(key, val);
+}
+
+function toggleGenre(genre) {
+  const idx = selectedGenres.indexOf(genre);
+  if (idx >= 0) selectedGenres.splice(idx, 1);
+  else selectedGenres.push(genre);
+  document.querySelectorAll('.genre-chip').forEach(chip => {
+    chip.classList.toggle('selected', selectedGenres.includes(chip.dataset.genre));
+  });
 }
 
 function setMode(m) {
@@ -350,81 +406,50 @@ function cancelName() {
 }
 
 window.initMap = async function() {
-  const { Map, InfoWindow } = await google.maps.importLibrary("maps");
+  const {Map, InfoWindow} = await google.maps.importLibrary("maps");
   await google.maps.importLibrary("places");
-
   map = new Map(document.getElementById('map'), {
-    center: { lat: OFFICE_LAT, lng: OFFICE_LNG },
-    zoom: 17,
-    mapTypeControl: false,
-    streetViewControl: false,
-    fullscreenControl: false,
-    clickableIcons: true,
+    center: {lat: OFFICE_LAT, lng: OFFICE_LNG}, zoom: 17,
+    mapTypeControl: false, streetViewControl: false, fullscreenControl: false, clickableIcons: true,
   });
-
   infoWindow = new InfoWindow();
-
-  // 起動時に現在地を取得して表示
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(pos => {
-      const lat = pos.coords.latitude;
-      const lng = pos.coords.longitude;
-      map.setCenter({ lat, lng });
+      const {latitude: lat, longitude: lng} = pos.coords;
+      map.setCenter({lat, lng});
       showCurrentLocation(lat, lng);
     });
   }
-
   map.addListener('click', async (e) => {
     if (mode !== 'register') return;
     if (!e.placeId) { showToast('お店のアイコンをクリックしてください'); return; }
     e.stop();
-
     try {
       const svc = new google.maps.places.PlacesService(map);
-      svc.getDetails(
-        { placeId: e.placeId, fields: ['name', 'formatted_address', 'geometry'] },
-        (place, status) => {
-          if (status === google.maps.places.PlacesServiceStatus.OK) {
-            selectedPlace = {
-              placeId: e.placeId, name: place.name,
-              address: place.formatted_address || '',
-              lat: place.geometry.location.lat(), lng: place.geometry.location.lng()
-            };
-          } else {
-            selectedPlace = {
-              placeId: e.placeId, name: '登録店舗', address: '',
-              lat: e.latLng.lat(), lng: e.latLng.lng()
-            };
-          }
-          openRegisterModal();
-        }
-      );
+      svc.getDetails({placeId: e.placeId, fields: ['name','formatted_address','geometry']}, (place, status) => {
+        selectedPlace = status === google.maps.places.PlacesServiceStatus.OK
+          ? {placeId: e.placeId, name: place.name, address: place.formatted_address||'', lat: place.geometry.location.lat(), lng: place.geometry.location.lng()}
+          : {placeId: e.placeId, name: '登録店舗', address: '', lat: e.latLng.lat(), lng: e.latLng.lng()};
+        openRegisterModal();
+      });
     } catch {
-      selectedPlace = {
-        placeId: e.placeId, name: '登録店舗', address: '',
-        lat: e.latLng.lat(), lng: e.latLng.lng()
-      };
+      selectedPlace = {placeId: e.placeId, name: '登録店舗', address: '', lat: e.latLng.lat(), lng: e.latLng.lng()};
       openRegisterModal();
     }
   });
-
-  map.addListener('click', () => { infoWindow.close(); });
-
+  map.addListener('click', () => infoWindow.close());
   await loadAndShowMarkers();
 }
 
 async function loadAndShowMarkers() {
   if (!window._db) return;
-  const { collection, getDocs } = window._fbFns;
+  const {collection, getDocs} = window._fbFns;
   const snap = await getDocs(collection(window._db, 'reviews'));
-  allReviews = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  allReviews = snap.docs.map(d => ({id: d.id, ...d.data()}));
 
   const grouped = {};
   allReviews.forEach(r => {
-    if (!grouped[r.placeId]) grouped[r.placeId] = {
-      name: r.shopName, address: r.shopAddress,
-      lat: r.lat, lng: r.lng, reviews: []
-    };
+    if (!grouped[r.placeId]) grouped[r.placeId] = {name: r.shopName, address: r.shopAddress, lat: r.lat, lng: r.lng, reviews: []};
     grouped[r.placeId].reviews.push(r);
   });
 
@@ -432,14 +457,20 @@ async function loadAndShowMarkers() {
   markers = [];
 
   for (const [placeId, data] of Object.entries(grouped)) {
+    // 最後に登録したユーザーのジャンルを取得
+    const sorted = [...data.reviews].sort((a,b) => (b.updatedAt||b.createdAt||'').localeCompare(a.updatedAt||a.createdAt||''));
+    const lastGenres = sorted[0]?.genres || [];
+    const genreLabel = lastGenres.length > 0 ? lastGenres.join('・') : '';
+
+    // マーカーラベル：店名 + ジャンル
+    const labelText = genreLabel ? `${data.name}\n${genreLabel}` : data.name;
+
     const marker = new google.maps.Marker({
-      position: { lat: data.lat, lng: data.lng },
+      position: {lat: data.lat, lng: data.lng},
       map, title: data.name,
       label: {
-        text: data.name,
-        color: '#333',
-        fontSize: '11px',
-        fontWeight: '600',
+        text: labelText,
+        color: '#333', fontSize: '11px', fontWeight: '600',
       },
       icon: {
         url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
@@ -448,7 +479,7 @@ async function loadAndShowMarkers() {
             <text x="20" y="26" text-anchor="middle" font-size="18">🍱</text>
           </svg>`),
         scaledSize: new google.maps.Size(40, 40),
-        labelOrigin: new google.maps.Point(20, 52),
+        labelOrigin: new google.maps.Point(20, 58),
       }
     });
 
@@ -457,31 +488,25 @@ async function loadAndShowMarkers() {
       infoWindow.setContent(`
         <div style="font-family:'Helvetica Neue',Arial,sans-serif;padding:4px 6px;">
           <div style="font-size:14px;font-weight:700;color:#333;">${data.name}</div>
+          ${genreLabel ? `<div style="font-size:11px;color:#888;margin-top:2px;">${genreLabel}</div>` : ''}
           <div style="font-size:11px;color:#FF6B35;margin-top:2px;">${hint}</div>
         </div>`);
       infoWindow.open(map, marker);
-
       setTimeout(() => {
         infoWindow.close();
-        if (mode === 'view') {
-          openViewModal(placeId, data);
-        } else {
-          selectedPlace = { placeId, name: data.name, address: data.address, lat: data.lat, lng: data.lng };
-          openRegisterModal();
-        }
+        if (mode === 'view') openViewModal(placeId, data);
+        else { selectedPlace = {placeId, name: data.name, address: data.address, lat: data.lat, lng: data.lng}; openRegisterModal(); }
       }, 600);
     });
-
     markers.push(marker);
   }
 }
 
 function openRegisterModal() {
-  const existing = allReviews.find(
-    r => r.placeId === selectedPlace.placeId && r.userName === currentUserName
-  );
+  const existing = allReviews.find(r => r.placeId === selectedPlace.placeId && r.userName === currentUserName);
   existingReviewId = existing ? existing.id : null;
   ratings = {};
+  selectedGenres = existing?.genres ? [...existing.genres] : [];
 
   const autoWalkMin = calcWalkMin(selectedPlace.lat, selectedPlace.lng);
   const walkMin = existing?.walkMin ?? autoWalkMin;
@@ -489,21 +514,25 @@ function openRegisterModal() {
   const section = document.getElementById('rating-section');
   section.innerHTML = '';
 
+  // 星評価（半星）
   RATING_ITEMS.forEach(item => {
-    const preVal = existing ? (existing.ratings[item.key] || 0) : 0;
+    const preVal = existing ? (existing.ratings?.[item.key] || 0) : 0;
     ratings[item.key] = preVal;
     const div = document.createElement('div');
     div.className = 'rating-item';
     div.innerHTML = `
       <label>${item.label}</label>
-      <div class="stars" id="stars-${item.key}">
-        ${[1,2,3,4,5].map(i =>
-          `<span class="star${i <= preVal ? ' active' : ''}" onclick="setStar('${item.key}',${i})">⭐</span>`
-        ).join('')}
-      </div>`;
+      <div class="rating-score-display" id="score-${item.key}">${preVal > 0 ? `${preVal} / 10` : '未評価'}</div>
+      <div class="half-stars" id="halfstars-${item.key}"></div>`;
     section.appendChild(div);
   });
+  // 星を描画
+  RATING_ITEMS.forEach(item => {
+    const preVal = existing ? (existing.ratings?.[item.key] || 0) : 0;
+    renderHalfStars(`halfstars-${item.key}`, item.key, preVal);
+  });
 
+  // 徒歩時間
   const walkDiv = document.createElement('div');
   walkDiv.className = 'walk-item';
   walkDiv.innerHTML = `
@@ -514,10 +543,37 @@ function openRegisterModal() {
     </div>`;
   section.appendChild(walkDiv);
 
+  section.appendChild(document.createElement('hr')).className = 'section-divider';
+
+  // ジャンル
+  const genreDiv = document.createElement('div');
+  genreDiv.className = 'genre-item';
+  genreDiv.innerHTML = `
+    <label>🏷️ ジャンル（複数選択可）</label>
+    <div class="genre-options">
+      ${GENRES.map(g => `<div class="genre-chip${selectedGenres.includes(g) ? ' selected' : ''}" data-genre="${g}" onclick="toggleGenre('${g}')">${g}</div>`).join('')}
+    </div>`;
+  section.appendChild(genreDiv);
+
+  // 食べたメニュー
+  const menuDiv = document.createElement('div');
+  menuDiv.className = 'text-item';
+  menuDiv.innerHTML = `
+    <label>🍽️ 食べたメニュー</label>
+    <input type="text" id="menu-input" placeholder="例：ランチセット、日替わり定食" value="${existing?.menu || ''}" />`;
+  section.appendChild(menuDiv);
+
+  // 自由記載
+  const noteDiv = document.createElement('div');
+  noteDiv.className = 'text-item';
+  noteDiv.innerHTML = `
+    <label>📝 自由記載</label>
+    <textarea id="note-input" rows="3" placeholder="感想、おすすめポイントなど">${existing?.note || ''}</textarea>`;
+  section.appendChild(noteDiv);
+
   document.getElementById('reg-shop-name').textContent = selectedPlace.name;
   document.getElementById('reg-shop-address').textContent = selectedPlace.address;
-  document.getElementById('edit-badge-wrap').innerHTML = existing
-    ? `<span class="edit-badge">✏️ 過去の評価を修正中</span>` : '';
+  document.getElementById('edit-badge-wrap').innerHTML = existing ? `<span class="edit-badge">✏️ 過去の評価を修正中</span>` : '';
   document.getElementById('submit-btn').textContent = existing ? '修正を保存する' : '登録する';
   document.getElementById('register-modal').classList.add('open');
 }
@@ -526,33 +582,30 @@ function closeRegisterModal() {
   document.getElementById('register-modal').classList.remove('open');
 }
 
-function setStar(key, val) {
-  ratings[key] = val;
-  document.querySelectorAll(`#stars-${key} .star`)
-    .forEach((s, i) => s.classList.toggle('active', i < val));
-}
-
 async function submitReview() {
-  const allRated = RATING_ITEMS.every(i => ratings[i.key] > 0);
+  const allRated = RATING_ITEMS.every(i => (ratings[i.key] || 0) > 0);
   if (!allRated) { showToast('全項目を評価してください'); return; }
-
   const walkMin = parseInt(document.getElementById('walk-min-input').value) || 1;
+  const menu = document.getElementById('menu-input').value.trim();
+  const note = document.getElementById('note-input').value.trim();
+
   const btn = document.getElementById('submit-btn');
   btn.disabled = true; btn.textContent = '保存中...';
 
-  const { collection, addDoc, doc, updateDoc } = window._fbFns;
+  const {collection, addDoc, doc, updateDoc} = window._fbFns;
   const isEdit = !!existingReviewId;
 
   if (isEdit) {
     await updateDoc(doc(window._db, 'reviews', existingReviewId), {
-      ratings, walkMin, updatedAt: new Date().toISOString()
+      ratings, walkMin, genres: selectedGenres, menu, note,
+      updatedAt: new Date().toISOString()
     });
   } else {
     await addDoc(collection(window._db, 'reviews'), {
-      placeId: selectedPlace.placeId,
-      shopName: selectedPlace.name, shopAddress: selectedPlace.address,
-      lat: selectedPlace.lat, lng: selectedPlace.lng,
+      placeId: selectedPlace.placeId, shopName: selectedPlace.name,
+      shopAddress: selectedPlace.address, lat: selectedPlace.lat, lng: selectedPlace.lng,
       userName: currentUserName, ratings, walkMin,
+      genres: selectedGenres, menu, note,
       createdAt: new Date().toISOString()
     });
   }
@@ -564,7 +617,6 @@ async function submitReview() {
   mode = 'view';
   document.getElementById('btn-view').classList.add('active');
   document.getElementById('btn-register').classList.remove('active');
-
   showToast(isEdit ? '✅ 修正しました！' : '✅ 登録しました！');
   existingReviewId = null;
   await loadAndShowMarkers();
@@ -574,49 +626,58 @@ function openViewModal(placeId, data) {
   document.getElementById('view-shop-name').textContent = data.name;
   document.getElementById('view-shop-address').textContent = data.address;
 
+  // 最新ジャンルをヘッダーに表示
+  const sorted = [...data.reviews].sort((a,b) => (b.updatedAt||b.createdAt||'').localeCompare(a.updatedAt||a.createdAt||''));
+  const lastGenres = sorted[0]?.genres || [];
+  const genreTags = document.getElementById('view-genre-tags');
+  genreTags.innerHTML = lastGenres.map(g => `<span class="genre-tag-display">${g}</span>`).join('');
+
   const avgSection = document.getElementById('avg-section');
   avgSection.innerHTML = '';
 
   RATING_ITEMS.forEach(item => {
-    const vals = data.reviews.map(r => r.ratings[item.key]).filter(Boolean);
-    const avg = vals.length ? (vals.reduce((a,b) => a+b, 0) / vals.length) : 0;
-    const filled = Math.round(avg);
+    const vals = data.reviews.map(r => r.ratings?.[item.key]).filter(v => v > 0);
+    const avg = vals.length ? (vals.reduce((a,b) => a+b,0) / vals.length) : 0;
+    const fullStars = Math.floor(avg / 2);
+    const halfStar = (avg % 2) >= 1 ? 1 : 0;
+    const emptyStars = 5 - fullStars - halfStar;
+    const starsHtml = '★'.repeat(fullStars) + (halfStar ? '½' : '') + '☆'.repeat(emptyStars);
     avgSection.innerHTML += `
       <div class="avg-item">
         <span class="avg-label">${item.label}</span>
         <div class="avg-score">
-          <span>${'⭐'.repeat(filled)}${'☆'.repeat(5-filled)}</span>
-          <span class="avg-num">${avg.toFixed(1)}</span>
+          <span style="color:#FF6B35">${starsHtml}</span>
+          <span class="avg-num">${avg.toFixed(1)}<span style="font-size:11px;color:#aaa">/10</span></span>
         </div>
       </div>`;
   });
 
   const walkVals = data.reviews.map(r => r.walkMin).filter(Boolean);
-  const avgWalk = walkVals.length ? Math.round(walkVals.reduce((a,b) => a+b, 0) / walkVals.length) : null;
+  const avgWalk = walkVals.length ? Math.round(walkVals.reduce((a,b)=>a+b,0)/walkVals.length) : null;
   avgSection.innerHTML += `
     <div class="avg-item">
       <span class="avg-label">🚶 徒歩時間</span>
-      <div class="avg-score">
-        <span class="avg-num">${avgWalk !== null ? `約${avgWalk}分` : '-'}</span>
-      </div>
+      <div class="avg-score"><span class="avg-num">${avgWalk !== null ? `約${avgWalk}分` : '-'}</span></div>
     </div>`;
 
   const list = document.getElementById('user-reviews-list');
   list.innerHTML = data.reviews.length === 0
     ? '<p class="no-reviews">まだ評価がありません</p>'
-    : data.reviews.map(r => `
-      <div class="user-review-card">
-        <div class="reviewer">👤 ${r.userName}</div>
-        ${RATING_ITEMS.map(item => `
-          <div class="user-review-item">
-            <span>${item.label}</span>
-            <span>${'⭐'.repeat(r.ratings[item.key]||0)}${'☆'.repeat(5-(r.ratings[item.key]||0))}</span>
-          </div>`).join('')}
-        <div class="user-review-item">
-          <span>🚶 徒歩時間</span>
-          <span>${r.walkMin ? `約${r.walkMin}分` : '-'}</span>
-        </div>
-      </div>`).join('');
+    : data.reviews.map(r => {
+        const ratingRows = RATING_ITEMS.map(item => {
+          const v = r.ratings?.[item.key] || 0;
+          return `<div class="user-review-item"><span>${item.label}</span><span style="color:#FF6B35;font-weight:600">${v}<span style="font-size:10px;color:#aaa">/10</span></span></div>`;
+        }).join('');
+        const walkRow = `<div class="user-review-item"><span>🚶 徒歩時間</span><span>${r.walkMin ? `約${r.walkMin}分` : '-'}</span></div>`;
+        const genres = r.genres?.length ? `<div class="user-review-item"><span>🏷️ ジャンル</span><span>${r.genres.join('・')}</span></div>` : '';
+        const menuRow = r.menu ? `<div class="user-review-text"><span>🍽️ メニュー：</span>${r.menu}</div>` : '';
+        const noteRow = r.note ? `<div class="user-review-text"><span>📝 メモ：</span>${r.note}</div>` : '';
+        return `
+          <div class="user-review-card">
+            <div class="reviewer">👤 ${r.userName}</div>
+            ${ratingRows}${walkRow}${genres}${menuRow}${noteRow}
+          </div>`;
+      }).join('');
 
   document.getElementById('view-modal').classList.add('open');
 }

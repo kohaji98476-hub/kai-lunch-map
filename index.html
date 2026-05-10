@@ -411,6 +411,7 @@ window.initMap = async function() {
   map = new Map(document.getElementById('map'), {
     center: {lat: OFFICE_LAT, lng: OFFICE_LNG}, zoom: 17,
     mapTypeControl: false, streetViewControl: false, fullscreenControl: false, clickableIcons: true,
+    gestureHandling: 'greedy',
   });
   infoWindow = new InfoWindow();
   if (navigator.geolocation) {

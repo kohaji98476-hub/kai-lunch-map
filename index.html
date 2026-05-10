@@ -173,8 +173,10 @@
   }
   #toast.show { opacity: 1; }
 
-  .section-divider {
-    border: none; border-top: 1px solid #f0f0f0; margin: 4px 0 20px;
+  .delete-btn {
+    width: 100%; padding: 12px; background: white; color: #e53935;
+    border: 1.5px solid #e53935; border-radius: 12px; font-size: 15px; font-weight: 600;
+    cursor: pointer; margin-top: 10px;
   }
 </style>
 </head>
@@ -225,6 +227,7 @@
       <div id="rating-section"></div>
       <button class="primary-btn" id="submit-btn" onclick="submitReview()">登録する</button>
       <button class="cancel-btn" onclick="closeRegisterModal()">キャンセル</button>
+      <button class="delete-btn" id="delete-btn" onclick="deleteReview()" style="display:none;">🗑️ この評価を削除する</button>
     </div>
   </div>
 </div>
@@ -253,7 +256,7 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getFirestore, collection, addDoc, getDocs, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
   const firebaseConfig = {
     apiKey: "AIzaSyCHIxKeZr_iA_K9XSSgteZjez7TnZIk1CM",
     authDomain: "kai-lunch-map-d16d0.firebaseapp.com",
@@ -266,7 +269,7 @@
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
   window._db = db;
-  window._fbFns = { collection, addDoc, getDocs, doc, updateDoc };
+  window._fbFns = { collection, addDoc, getDocs, doc, updateDoc, deleteDoc };
 </script>
 
 <script>
@@ -576,7 +579,26 @@ function openRegisterModal() {
   document.getElementById('reg-shop-address').textContent = selectedPlace.address;
   document.getElementById('edit-badge-wrap').innerHTML = existing ? `<span class="edit-badge">✏️ 過去の評価を修正中</span>` : '';
   document.getElementById('submit-btn').textContent = existing ? '修正を保存する' : '登録する';
+  document.getElementById('delete-btn').style.display = existing ? 'block' : 'none';
   document.getElementById('register-modal').classList.add('open');
+}
+
+async function deleteReview() {
+  if (!existingReviewId) return;
+  if (!confirm('この評価を削除しますか？')) return;
+
+  const {doc, deleteDoc} = window._fbFns;
+  await deleteDoc(doc(window._db, 'reviews', existingReviewId));
+
+  document.getElementById('register-modal').classList.remove('open');
+  document.getElementById('register-hint').classList.remove('show');
+  document.getElementById('user-badge').classList.remove('show');
+  mode = 'view';
+  document.getElementById('btn-view').classList.add('active');
+  document.getElementById('btn-register').classList.remove('active');
+  showToast('🗑️ 評価を削除しました');
+  existingReviewId = null;
+  await loadAndShowMarkers();
 }
 
 function closeRegisterModal() {

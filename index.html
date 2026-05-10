@@ -350,7 +350,7 @@ function renderHalfStars(containerId, key, currentVal) {
 function updateHalfStarDisplay(key, val) {
   ratings[key] = val;
   const display = document.getElementById(`score-${key}`);
-  if (display) display.textContent = val > 0 ? `${val} / 10` : '未評価';
+  if (display) display.textContent = val > 0 ? `${val} / 5` : '未評価';
   for (let i = 1; i <= 5; i++) {
     const fill = document.getElementById(`sf-${key}-${i}`);
     if (!fill) continue;
@@ -463,7 +463,7 @@ async function loadAndShowMarkers() {
     const genreLabel = lastGenres.length > 0 ? lastGenres.join('・') : '';
 
     // マーカーラベル：店名 + ジャンル
-    const labelText = genreLabel ? `${data.name}\n${genreLabel}` : data.name;
+    const labelText = data.name;
 
     const marker = new google.maps.Marker({
       position: {lat: data.lat, lng: data.lng},
@@ -522,7 +522,7 @@ function openRegisterModal() {
     div.className = 'rating-item';
     div.innerHTML = `
       <label>${item.label}</label>
-      <div class="rating-score-display" id="score-${item.key}">${preVal > 0 ? `${preVal} / 10` : '未評価'}</div>
+      <div class="rating-score-display" id="score-${item.key}">${preVal > 0 ? `${preVal} / 5` : '未評価'}</div>
       <div class="half-stars" id="halfstars-${item.key}"></div>`;
     section.appendChild(div);
   });
@@ -647,7 +647,7 @@ function openViewModal(placeId, data) {
         <span class="avg-label">${item.label}</span>
         <div class="avg-score">
           <span style="color:#FF6B35">${starsHtml}</span>
-          <span class="avg-num">${avg.toFixed(1)}<span style="font-size:11px;color:#aaa">/10</span></span>
+          <span class="avg-num">${avg.toFixed(1)}<span style="font-size:11px;color:#aaa">/5</span></span>
         </div>
       </div>`;
   });
@@ -666,10 +666,10 @@ function openViewModal(placeId, data) {
     : data.reviews.map(r => {
         const ratingRows = RATING_ITEMS.map(item => {
           const v = r.ratings?.[item.key] || 0;
-          return `<div class="user-review-item"><span>${item.label}</span><span style="color:#FF6B35;font-weight:600">${v}<span style="font-size:10px;color:#aaa">/10</span></span></div>`;
+          return `<div class="user-review-item"><span>${item.label}</span><span style="color:#FF6B35;font-weight:600">${v}<span style="font-size:10px;color:#aaa">/5</span></span></div>`;
         }).join('');
         const walkRow = `<div class="user-review-item"><span>🚶 徒歩時間</span><span>${r.walkMin ? `約${r.walkMin}分` : '-'}</span></div>`;
-        const genres = r.genres?.length ? `<div class="user-review-item"><span>🏷️ ジャンル</span><span>${r.genres.join('・')}</span></div>` : '';
+        const genres = '';
         const menuRow = r.menu ? `<div class="user-review-text"><span>🍽️ メニュー：</span>${r.menu}</div>` : '';
         const noteRow = r.note ? `<div class="user-review-text"><span>📝 メモ：</span>${r.note}</div>` : '';
         return `

@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="theme-color" content="#FF6B35">
+<meta name="theme-color" content="#2196F3">
 <title>KAI Lunch Map</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: 'Helvetica Neue', Arial, sans-serif; background: #f5f5f5; height: 100vh; display: flex; flex-direction: column; }
 
   #header {
-    background: #FF6B35; color: white; padding: 10px 16px;
+    background: #2196F3; color: white; padding: 10px 16px;
     display: flex; align-items: center; justify-content: space-between;
     box-shadow: 0 2px 8px rgba(0,0,0,0.2); z-index: 100; flex-wrap: wrap; gap: 8px;
   }
@@ -22,13 +22,13 @@
     font-size: 13px; font-weight: 600; transition: all 0.2s;
     background: transparent; color: white;
   }
-  .mode-btn.active { background: white; color: #FF6B35; }
+  .mode-btn.active { background: white; color: #2196F3; }
   #filter-btn {
     background: rgba(255,255,255,0.2); border: 1.5px solid rgba(255,255,255,0.5);
     color: white; border-radius: 20px; padding: 5px 12px;
     font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
   }
-  #filter-btn.active { background: white; color: #FF6B35; border-color: white; }
+  #filter-btn.active { background: white; color: #2196F3; border-color: white; }
 
   #map { flex: 1; width: 100%; }
 
@@ -56,7 +56,7 @@
   @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 
   .modal-header {
-    background: #FF6B35; border-radius: 20px 20px 0 0;
+    background: #2196F3; border-radius: 20px 20px 0 0;
     padding: 16px 24px 14px; position: sticky; top: 0; z-index: 10;
   }
   .modal-handle { width: 40px; height: 4px; background: rgba(255,255,255,0.4); border-radius: 2px; margin: 0 auto 12px; }
@@ -81,10 +81,10 @@
     width: 100%; padding: 12px 16px; border: 1.5px solid #ddd; border-radius: 12px;
     font-size: 16px; outline: none;
   }
-  .name-input-wrap input:focus { border-color: #FF6B35; }
+  .name-input-wrap input:focus { border-color: #2196F3; }
 
   .primary-btn {
-    width: 100%; padding: 14px; background: #FF6B35; color: white;
+    width: 100%; padding: 14px; background: #2196F3; color: white;
     border: none; border-radius: 12px; font-size: 16px; font-weight: 700;
     cursor: pointer;
   }
@@ -98,11 +98,11 @@
   /* 半星評価 */
   .rating-item { margin-bottom: 20px; }
   .rating-item label { font-size: 14px; color: #444; font-weight: 600; display: block; margin-bottom: 6px; }
-  .rating-score-display { font-size: 13px; color: #FF6B35; font-weight: 700; margin-bottom: 6px; }
+  .rating-score-display { font-size: 13px; color: #2196F3; font-weight: 700; margin-bottom: 6px; }
   .half-stars { display: flex; gap: 2px; position: relative; }
   .star-wrap { position: relative; width: 32px; height: 32px; cursor: pointer; }
   .star-wrap .star-bg { position: absolute; font-size: 28px; color: #ddd; user-select: none; }
-  .star-wrap .star-fill { position: absolute; font-size: 28px; color: #FF6B35; overflow: hidden; width: 0%; user-select: none; transition: width 0.1s; }
+  .star-wrap .star-fill { position: absolute; font-size: 28px; color: #2196F3; overflow: hidden; width: 0%; user-select: none; transition: width 0.1s; }
 
   /* 徒歩時間 */
   .walk-item { margin-bottom: 20px; }
@@ -110,7 +110,7 @@
   .walk-input-row { display: flex; align-items: center; gap: 10px; }
   .walk-input-row input[type=number] {
     width: 90px; padding: 10px 12px; border: 1.5px solid #ddd; border-radius: 12px;
-    font-size: 20px; font-weight: 700; color: #FF6B35; text-align: center; outline: none;
+    font-size: 20px; font-weight: 700; color: #2196F3; text-align: center; outline: none;
   }
   .walk-unit { font-size: 14px; color: #666; }
   .walk-auto-badge { font-size: 11px; color: #888; background: #f0f0f0; border-radius: 10px; padding: 2px 8px; }
@@ -122,7 +122,7 @@
     width: 100%; padding: 10px 14px; border: 1.5px solid #ddd; border-radius: 12px;
     font-size: 14px; outline: none; font-family: inherit; resize: vertical;
   }
-  .text-item input:focus, .text-item textarea:focus { border-color: #FF6B35; }
+  .text-item input:focus, .text-item textarea:focus { border-color: #2196F3; }
 
   /* ジャンル選択 */
   .genre-item { margin-bottom: 20px; }
@@ -133,7 +133,7 @@
     font-size: 13px; cursor: pointer; background: white; color: #555;
     transition: all 0.15s;
   }
-  .genre-chip.selected { background: #FF6B35; color: white; border-color: #FF6B35; }
+  .genre-chip.selected { background: #2196F3; color: white; border-color: #2196F3; }
 
   .edit-badge {
     display: inline-block; background: rgba(255,255,255,0.2); color: white;
@@ -149,7 +149,7 @@
   .avg-item:last-child { border-bottom: none; }
   .avg-label { font-size: 14px; color: #444; }
   .avg-score { display: flex; align-items: center; gap: 8px; }
-  .avg-num { font-size: 14px; font-weight: 700; color: #FF6B35; }
+  .avg-num { font-size: 14px; font-weight: 700; color: #2196F3; }
 
   .user-reviews { margin-top: 16px; }
   .user-reviews h3 { font-size: 14px; color: #888; margin-bottom: 12px; font-weight: 600; }
@@ -161,8 +161,8 @@
   .no-reviews { text-align: center; color: #aaa; font-size: 14px; padding: 20px 0; }
 
   #register-hint {
-    display: none; background: #FFF3EE; border-top: 2px solid #FFD5C2;
-    padding: 10px 16px; text-align: center; font-size: 13px; color: #FF6B35; font-weight: 600;
+    display: none; background: #E3F2FD; border-top: 2px solid #90CAF9;
+    padding: 10px 16px; text-align: center; font-size: 13px; color: #2196F3; font-weight: 600;
   }
   #register-hint.show { display: block; }
 
@@ -551,7 +551,7 @@ async function loadAndShowMarkers() {
       icon: {
         url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
           <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
-            <circle cx="20" cy="20" r="18" fill="#FF6B35" stroke="white" stroke-width="3"/>
+            <circle cx="20" cy="20" r="18" fill="#2196F3" stroke="white" stroke-width="3"/>
             <text x="20" y="26" text-anchor="middle" font-size="18">🍱</text>
           </svg>`),
         scaledSize: new google.maps.Size(40, 40),
@@ -565,7 +565,7 @@ async function loadAndShowMarkers() {
         <div style="font-family:'Helvetica Neue',Arial,sans-serif;padding:4px 6px;">
           <div style="font-size:14px;font-weight:700;color:#333;">${data.name}</div>
           ${genreLabel ? `<div style="font-size:11px;color:#888;margin-top:2px;">${genreLabel}</div>` : ''}
-          <div style="font-size:11px;color:#FF6B35;margin-top:2px;">${hint}</div>
+          <div style="font-size:11px;color:#2196F3;margin-top:2px;">${hint}</div>
         </div>`);
       infoWindow.open(map, marker);
       setTimeout(() => {
@@ -741,7 +741,7 @@ function openViewModal(placeId, data) {
       <div class="avg-item">
         <span class="avg-label">${item.label}</span>
         <div class="avg-score">
-          <span style="color:#FF6B35">${starsHtml}</span>
+          <span style="color:#2196F3">${starsHtml}</span>
           <span class="avg-num">${avg.toFixed(1)}<span style="font-size:11px;color:#aaa">/5</span></span>
         </div>
       </div>`;
@@ -761,7 +761,7 @@ function openViewModal(placeId, data) {
     : data.reviews.map(r => {
         const ratingRows = RATING_ITEMS.map(item => {
           const v = r.ratings?.[item.key] || 0;
-          return `<div class="user-review-item"><span>${item.label}</span><span style="color:#FF6B35;font-weight:600">${v}<span style="font-size:10px;color:#aaa">/5</span></span></div>`;
+          return `<div class="user-review-item"><span>${item.label}</span><span style="color:#2196F3;font-weight:600">${v}<span style="font-size:10px;color:#aaa">/5</span></span></div>`;
         }).join('');
         const walkRow = `<div class="user-review-item"><span>🚶 徒歩時間</span><span>${r.walkMin ? `約${r.walkMin}分` : '-'}</span></div>`;
         const genres = '';

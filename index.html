@@ -10,11 +10,12 @@
   body { font-family: 'Helvetica Neue', Arial, sans-serif; background: #f5f5f5; height: 100vh; display: flex; flex-direction: column; }
 
   #header {
-    background: #FF6B35; color: white; padding: 12px 16px;
+    background: #FF6B35; color: white; padding: 10px 16px;
     display: flex; align-items: center; justify-content: space-between;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2); z-index: 100;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2); z-index: 100; flex-wrap: wrap; gap: 8px;
   }
   #header h1 { font-size: 18px; font-weight: 700; }
+  #header-right { display: flex; align-items: center; gap: 8px; }
   #mode-toggle { display: flex; background: rgba(255,255,255,0.2); border-radius: 20px; padding: 3px; }
   .mode-btn {
     padding: 5px 14px; border-radius: 17px; border: none; cursor: pointer;
@@ -22,17 +23,25 @@
     background: transparent; color: white;
   }
   .mode-btn.active { background: white; color: #FF6B35; }
+  #filter-btn {
+    background: rgba(255,255,255,0.2); border: 1.5px solid rgba(255,255,255,0.5);
+    color: white; border-radius: 20px; padding: 5px 12px;
+    font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
+  }
+  #filter-btn.active { background: white; color: #FF6B35; border-color: white; }
 
   #map { flex: 1; width: 100%; }
 
   #locate-btn {
     position: fixed; bottom: 30px; left: 16px;
-    background: white; border: none; border-radius: 50%;
-    width: 44px; height: 44px; font-size: 20px;
+    background: white; border: none; border-radius: 16px;
+    padding: 8px 12px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.2);
     cursor: pointer; z-index: 400;
-    display: flex; align-items: center; justify-content: center;
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
   }
+  #locate-btn .locate-icon { font-size: 20px; line-height: 1; }
+  #locate-btn .locate-label { font-size: 10px; color: #555; font-weight: 600; white-space: nowrap; }
 
   .modal-overlay {
     display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5);
@@ -184,14 +193,20 @@
 
 <div id="header">
   <h1>🍱 KAI Lunch Map</h1>
-  <div id="mode-toggle">
-    <button class="mode-btn active" id="btn-view" onclick="setMode('view')">閲覧</button>
-    <button class="mode-btn" id="btn-register" onclick="setMode('register')">登録</button>
+  <div id="header-right">
+    <button id="filter-btn" onclick="openFilterModal()">🏷️ 絞り込む</button>
+    <div id="mode-toggle">
+      <button class="mode-btn active" id="btn-view" onclick="setMode('view')">閲覧</button>
+      <button class="mode-btn" id="btn-register" onclick="setMode('register')">登録</button>
+    </div>
   </div>
 </div>
 
 <div id="map"></div>
-<button id="locate-btn" onclick="goToCurrentLocation()">📍</button>
+<button id="locate-btn" onclick="goToCurrentLocation()">
+  <span class="locate-icon">📍</span>
+  <span class="locate-label">現在地へ移動</span>
+</button>
 <div id="register-hint">📍 お店のアイコンをクリックして評価を登録・修正してください</div>
 <div id="user-badge"></div>
 
@@ -407,7 +422,7 @@ function setMode(m) {
   } else {
     document.getElementById('register-hint').classList.remove('show');
     document.getElementById('user-badge').classList.remove('show');
-    openFilterModal();
+    loadAndShowMarkers();
   }
 }
 
@@ -431,12 +446,14 @@ function toggleFilterGenre(genre) {
 
 function applyFilter() {
   document.getElementById('filter-modal').classList.remove('open');
+  document.getElementById('filter-btn').classList.toggle('active', filterGenres.length > 0);
   loadAndShowMarkers();
 }
 
 function clearFilter() {
   filterGenres = [];
   document.getElementById('filter-modal').classList.remove('open');
+  document.getElementById('filter-btn').classList.remove('active');
   loadAndShowMarkers();
 }
 

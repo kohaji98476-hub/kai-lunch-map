@@ -195,6 +195,26 @@
 <div id="register-hint">📍 お店のアイコンをクリックして評価を登録・修正してください</div>
 <div id="user-badge"></div>
 
+<!-- ジャンルフィルターモーダル -->
+<div class="modal-overlay" id="filter-modal">
+  <div class="modal">
+    <div class="modal-header-simple">
+      <div class="modal-handle"></div>
+      <h2>🏷️ ジャンルで絞り込む</h2>
+      <p style="margin-bottom:16px;">表示したいジャンルを選択してください（複数選択可）</p>
+    </div>
+    <div class="modal-body" style="margin-top:16px;">
+      <div class="genre-options" id="filter-genre-options">
+        <!-- JSで生成 -->
+      </div>
+      <div style="margin-top:20px;">
+        <button class="primary-btn" onclick="applyFilter()">この条件で表示する</button>
+        <button class="cancel-btn" onclick="clearFilter()">すべて表示する</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ① 名前入力モーダル -->
 <div class="modal-overlay" id="name-modal">
   <div class="modal">
@@ -290,7 +310,7 @@ const GENRES = [
 ];
 
 let map, mode = 'view', markers = [], selectedPlace = null;
-let ratings = {}, selectedGenres = [];
+let ratings = {}, selectedGenres = [], filterGenres = [];
 let currentUserName = '', existingReviewId = null, allReviews = [];
 let infoWindow = null, currentLocationMarker = null;
 
@@ -387,8 +407,37 @@ function setMode(m) {
   } else {
     document.getElementById('register-hint').classList.remove('show');
     document.getElementById('user-badge').classList.remove('show');
-    loadAndShowMarkers();
+    openFilterModal();
   }
+}
+
+function openFilterModal() {
+  const container = document.getElementById('filter-genre-options');
+  container.innerHTML = GENRES.map(g => `
+    <div class="genre-chip${filterGenres.includes(g) ? ' selected' : ''}"
+         data-genre="${g}" onclick="toggleFilterGenre('${g}')">${g}</div>
+  `).join('');
+  document.getElementById('filter-modal').classList.add('open');
+}
+
+function toggleFilterGenre(genre) {
+  const idx = filterGenres.indexOf(genre);
+  if (idx >= 0) filterGenres.splice(idx, 1);
+  else filterGenres.push(genre);
+  document.querySelectorAll('#filter-genre-options .genre-chip').forEach(chip => {
+    chip.classList.toggle('selected', filterGenres.includes(chip.dataset.genre));
+  });
+}
+
+function applyFilter() {
+  document.getElementById('filter-modal').classList.remove('open');
+  loadAndShowMarkers();
+}
+
+function clearFilter() {
+  filterGenres = [];
+  document.getElementById('filter-modal').classList.remove('open');
+  loadAndShowMarkers();
 }
 
 function confirmName() {
@@ -461,6 +510,12 @@ async function loadAndShowMarkers() {
   markers = [];
 
   for (const [placeId, data] of Object.entries(grouped)) {
+    // ジャンルフィルター適用
+    if (filterGenres.length > 0) {
+      const allGenres = data.reviews.flatMap(r => r.genres || []);
+      const hasMatch = filterGenres.some(g => allGenres.includes(g));
+      if (!hasMatch) continue;
+    }
     // 最後に登録したユーザーのジャンルを取得
     const sorted = [...data.reviews].sort((a,b) => (b.updatedAt||b.createdAt||'').localeCompare(a.updatedAt||a.createdAt||''));
     const lastGenres = sorted[0]?.genres || [];
@@ -661,8 +716,8 @@ function openViewModal(placeId, data) {
   RATING_ITEMS.forEach(item => {
     const vals = data.reviews.map(r => r.ratings?.[item.key]).filter(v => v > 0);
     const avg = vals.length ? (vals.reduce((a,b) => a+b,0) / vals.length) : 0;
-    const fullStars = Math.floor(avg / 2);
-    const halfStar = (avg % 2) >= 1 ? 1 : 0;
+    const fullStars = Math.floor(avg);
+    const halfStar = (avg % 1) >= 0.5 ? 1 : 0;
     const emptyStars = 5 - fullStars - halfStar;
     const starsHtml = '★'.repeat(fullStars) + (halfStar ? '½' : '') + '☆'.repeat(emptyStars);
     avgSection.innerHTML += `

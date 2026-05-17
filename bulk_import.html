@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>一括登録ツール</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: sans-serif; background: #f5f5f5; padding: 20px; }
+  .card { background: white; border-radius: 16px; padding: 24px; max-width: 700px; margin: 0 auto; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+  h2 { color: #173D8D; margin-bottom: 8px; }
+  p { color: #666; font-size: 14px; margin-bottom: 16px; }
+  button { padding: 12px 24px; background: #173D8D; color: white; border: none; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; margin-right: 8px; }
+  button:disabled { background: #ccc; cursor: not-allowed; }
+  #progress { margin: 16px 0; font-size: 14px; }
+  .progress-bar { background: #eee; border-radius: 10px; height: 12px; margin: 8px 0; }
+  .progress-fill { background: #173D8D; border-radius: 10px; height: 12px; width: 0%; transition: width 0.3s; }
+  #log { margin-top: 16px; max-height: 400px; overflow-y: auto; font-size: 12px; font-family: monospace; background: #f9f9f9; border-radius: 8px; padding: 12px; }
+  .log-ok { color: #4CAF50; }
+  .log-skip { color: #FF9800; }
+  .log-err { color: #e53935; }
+  #not-found { margin-top: 16px; background: #FFF3E0; border-radius: 8px; padding: 12px; font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h2>🍱 一括登録ツール</h2>
+  <p>142件のデータをFirebaseに一括登録します。Places APIでお店を検索して座標を自動取得します。</p>
+  <button id="startBtn" onclick="startImport()">登録開始</button>
+  <button onclick="location.reload()">リセット</button>
+  <div id="progress">
+    <div>進捗: <span id="prog-text">0 / 0</span></div>
+    <div class="progress-bar"><div class="progress-fill" id="prog-bar"></div></div>
+  </div>
+  <div id="log"></div>
+  <div id="not-found" style="display:none;">
+    <strong>⚠️ 見つからなかったお店:</strong>
+    <div id="not-found-list"></div>
+  </div>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getFirestore, addDoc, collection } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  const app = initializeApp({
+    apiKey: "AIzaSyCHIxKeZr_iA_K9XSSgteZjez7TnZIk1CM",
+    authDomain: "kai-lunch-map-d16d0.firebaseapp.com",
+    projectId: "kai-lunch-map-d16d0",
+    storageBucket: "kai-lunch-map-d16d0.firebasestorage.app",
+    messagingSenderId: "107069095031",
+    appId: "1:107069095031:web:0a107a881ae79b63dcda72",
+  });
+  const db = getFirestore(app);
+  window._db = db;
+  window._addDoc = addDoc;
+  window._collection = collection;
+</script>
+
+<script>
+const RECORDS = [{"shop": "越後屋 平次", "genre": "海鮮・寿司・焼き魚", "user": "小林", "menu": "まぐろねぎとろハーフ丼", "taste": 3.5, "portion": 2.0, "price": 3.0, "ambience": 2.0, "speed": 1.5, "note": ""}, {"shop": "越後屋 平次", "genre": "海鮮・寿司・焼き魚", "user": "月本", "menu": "銀だら山椒焼き", "taste": 3.5, "portion": 1.5, "price": 2.0, "ambience": 1.0, "speed": 2.0, "note": "会計は代表一人を要求される バイトが無言でお料理置いていく😭"}, {"shop": "越後屋 平次", "genre": "海鮮・寿司・焼き魚", "user": "八代", "menu": "ねぎとろ丼", "taste": 4.0, "portion": 2.5, "price": 2.0, "ambience": 1.0, "speed": 1.5, "note": "会計まとめてなのと店員呼びづらいのがややマイナス"}, {"shop": "越後屋 平次", "genre": "海鮮・寿司・焼き魚", "user": "川野", "menu": "サーモンハラス", "taste": 3.0, "portion": 2.0, "price": 2.0, "ambience": 1.0, "speed": 1.5, "note": "奥まで店員が来ないから、呼びに行くのがめんどくさい"}, {"shop": "佐賀ふもと赤鶏 酒場 髙しな", "genre": "その他和食", "user": "小林", "menu": "", "taste": 4.0, "portion": 2.5, "price": 4.0, "ambience": 2.0, "speed": 1.5, "note": ""}, {"shop": "佐賀ふもと赤鶏 酒場 髙しな", "genre": "その他和食", "user": "月本", "menu": "ランチ4種コンプ済み", "taste": 4.0, "portion": 2.5, "price": 3.0, "ambience": 2.0, "speed": 1.5, "note": "夜は焼く人によってはめっちゃ塩辛い焼き鳥出てくることアリ"}, {"shop": "佐賀ふもと赤鶏 酒場 髙しな", "genre": "その他和食", "user": "八代", "menu": "ランチ4種コンプ済み", "taste": 4.5, "portion": 2.5, "price": 3.0, "ambience": 2.0, "speed": 1.5, "note": "店内雰囲気 基本良いけど新人がビクついてるのを見るといたたまれなくなる"}, {"shop": "佐賀ふもと赤鶏 酒場 髙しな", "genre": "その他和食", "user": "川野", "menu": "ランチ4種コンプ済み", "taste": 4.0, "portion": 2.5, "price": 3.5, "ambience": 1.5, "speed": 2.0, "note": "米の柔らかさが気になっているが改善方向？"}, {"shop": "蕎麦処 陸人", "genre": "そば・うどん", "user": "小林", "menu": "", "taste": 3.5, "portion": 2.5, "price": 4.0, "ambience": 2.0, "speed": 2.0, "note": ""}, {"shop": "蕎麦処 陸人", "genre": "そば・うどん", "user": "月本", "menu": "おろし,肉,とろろ", "taste": 4.0, "portion": 2.5, "price": 3.5, "ambience": 2.0, "speed": 1.5, "note": "竜田揚げ0~5個選んで量と油分を調整可能なの普通に神システム"}, {"shop": "蕎麦処 陸人", "genre": "そば・うどん", "user": "八代", "menu": "おろし　とろろ", "taste": 5.0, "portion": 2.5, "price": 4.0, "ambience": 2.5, "speed": 1.5, "note": "うますぎ　日曜に行くと柴犬がいる　並んでも意外と時間かからない"}, {"shop": "蕎麦処 陸人", "genre": "そば・うどん", "user": "川野", "menu": "おろし肉そば", "taste": 4.5, "portion": 2.5, "price": 3.0, "ambience": 2.0, "speed": 1.5, "note": "待つことが多いがおいしい"}, {"shop": "ずく箱（2025.6末閉店）", "genre": "その他（和食以外）", "user": "月本", "menu": "", "taste": 3.5, "portion": 2.5, "price": 4.0, "ambience": 2.5, "speed": 1.5, "note": "🦉"}, {"shop": "ずく箱（2025.6末閉店）", "genre": "その他（和食以外）", "user": "八代", "menu": "", "taste": 3.5, "portion": 2.5, "price": 4.0, "ambience": 2.5, "speed": 1.5, "note": "🦉"}, {"shop": "中華居酒屋 貴族", "genre": "中華料理", "user": "月本", "menu": "色々", "taste": 2.5, "portion": 2.0, "price": 4.5, "ambience": 1.5, "speed": 2.0, "note": "ランチ、ランチデータベースですからね！年の瀬は胡蝶の夢‥"}, {"shop": "中華居酒屋 貴族", "genre": "中華料理", "user": "八代", "menu": "", "taste": 3.5, "portion": 2.5, "price": 4.5, "ambience": 1.0, "speed": 1.5, "note": "塩谷さんのスマホがソファと壁のすき間に吸い込まれたことあり"}, {"shop": "中華居酒屋 貴族", "genre": "中華料理", "user": "川野", "menu": "色々", "taste": 3.0, "portion": 2.0, "price": 4.5, "ambience": 1.5, "speed": 2.0, "note": "良くも悪くも町中華って感じで良い"}, {"shop": "雲林房", "genre": "中華料理", "user": "月本", "menu": "汁なし,あり,麻婆  33/34/24", "taste": 4.0, "portion": 2.0, "price": 3.0, "ambience": 2.0, "speed": 1.5, "note": "読み：ゆんりんぼう　うんじゃない 　辛さと痺れをカスタマイズできる"}, {"shop": "雲林房", "genre": "中華料理", "user": "八代", "menu": "汁なし24・23　麻婆丼", "taste": 4.5, "portion": 2.5, "price": 3.0, "ambience": 2.0, "speed": 1.5, "note": "2-3-4に明確な差があるので注意　麻婆うますぎる"}, {"shop": "ミートガーデン", "genre": "カレー", "user": "小林", "menu": "チーナン，豚丼", "taste": 4.0, "portion": 2.5, "price": 4.5, "ambience": 2.0, "speed": 2.0, "note": ""}, {"shop": "ミートガーデン", "genre": "カレー", "user": "月本", "menu": "チーナン.ナン, ハンバーグ", "taste": 3.0, "portion": 2.5, "price": 3.5, "ambience": 2.0, "speed": 2.5, "note": "チー チー！🤓 チーズナンだ！　点数じゃないんだよ行く理由は。"}, {"shop": "ミートガーデン", "genre": "カレー", "user": "八代", "menu": "ナン　チーズナン　豚丼", "taste": 4.0, "portion": 2.5, "price": 4.0, "ambience": 2.0, "speed": 2.5, "note": "多すぎないメニューもある　自制心を養える　ナンがちゃんとうまい"}, {"shop": "ミートガーデン", "genre": "カレー", "user": "川野", "menu": "ナン・チーナン", "taste": 3.0, "portion": 1.5, "price": 4.0, "ambience": 1.5, "speed": 2.0, "note": "程よく行けるエンタメ感があって好き"}, {"shop": "コスモ厨房", "genre": "中華料理", "user": "月本", "menu": "レバニラ,麻婆,餃子,角煮", "taste": 5.0, "portion": 1.5, "price": 3.0, "ambience": 2.5, "speed": 2.5, "note": "ちょい遅めに着くことで、2階に通されるのが逆に良い　お茶コーヒードリンクバーあり"}, {"shop": "コスモ厨房", "genre": "中華料理", "user": "八代", "menu": "塩ラーメン、レバニラ", "taste": 5.0, "portion": 2.0, "price": 3.0, "ambience": 2.5, "speed": 2.0, "note": "すべての料理のクオリティがワンランク高い"}, {"shop": "コスモ厨房", "genre": "中華料理", "user": "川野", "menu": "レバニラ・よだれ鶏・エビチリ", "taste": 5.0, "portion": 1.5, "price": 2.5, "ambience": 2.0, "speed": 2.5, "note": "とにかく美味い。値段は高めだが、納得の味。"}, {"shop": "香福味坊", "genre": "中華料理", "user": "月本", "menu": "色々", "taste": 3.5, "portion": 2.5, "price": 3.5, "ambience": 2.0, "speed": 1.5, "note": "白身魚のうま煮←やば辛　広く大人数でも入れるが、待ちはする　バイキングあり"}, {"shop": "香福味坊", "genre": "中華料理", "user": "八代", "menu": "色々", "taste": 3.5, "portion": 2.5, "price": 3.5, "ambience": 2.0, "speed": 1.5, "note": "辛いものはめちゃくちゃ辛い。ラム系が旨い。ラーメンセット多すぎがち"}, {"shop": "香福味坊", "genre": "中華料理", "user": "川野", "menu": "色々", "taste": 3.0, "portion": 1.5, "price": 4.0, "ambience": 1.5, "speed": 1.5, "note": "辛いがおいしい。待ち時間はその日によるが待つことも多い"}, {"shop": "いわし料理 大松", "genre": "その他和食", "user": "月本", "menu": "からあげメンチカツ、刺身丼", "taste": 3.5, "portion": 2.0, "price": 4.0, "ambience": 1.5, "speed": 2.0, "note": "からあげがなぜかチョイ辛"}, {"shop": "いわし料理 大松", "genre": "その他和食", "user": "八代", "menu": "からあげメンチカツ", "taste": 3.0, "portion": 2.0, "price": 4.0, "ambience": 1.5, "speed": 2.0, "note": "からあげがなぜかチョイ辛 でも結構好きな味・食感だった"}, {"shop": "いわし料理 大松", "genre": "その他和食", "user": "川野", "menu": "海鮮丼", "taste": 3.0, "portion": 1.5, "price": 3.0, "ambience": 1.5, "speed": 1.0, "note": "味は美味しかったが、提供が遅かった"}, {"shop": "バンコック ポニー食堂", "genre": "アジア・エスニック", "user": "月本", "menu": "ほぼ制覇したかも", "taste": 4.0, "portion": 2.5, "price": 3.5, "ambience": 2.5, "speed": 1.0, "note": "明るい気持ちになりますね"}, {"shop": "バンコック ポニー食堂", "genre": "アジア・エスニック", "user": "八代", "menu": "カオソイ　パッタイ", "taste": 4.5, "portion": 2.5, "price": 3.5, "ambience": 2.0, "speed": 1.5, "note": "店の外に並ぶことが多いが入ってからは早い　ついおまけ小皿付けちゃうけどなくても量十分"}, {"shop": "バンコック ポニー食堂", "genre": "アジア・エスニック", "user": "川野", "menu": "トムヤムクン", "taste": 4.5, "portion": 2.5, "price": 3.5, "ambience": 2.5, "speed": 1.0, "note": "並んでいることが多いが提供は早い。他にない味なので行きたくなる"}, {"shop": "湘悦", "genre": "中華料理", "user": "月本", "menu": "坦々刀削麺", "taste": 2.5, "portion": 2.5, "price": 4.0, "ambience": 2.0, "speed": 1.5, "note": "台湾唐揚げ(菜香縁)から変わってしまった…悪いことはないけど、積極的に選ぶ理由がないかも"}, {"shop": "湘悦", "genre": "中華料理", "user": "八代", "menu": "からあげ定食", "taste": 2.0, "portion": 2.5, "price": 4.0, "ambience": 1.5, "speed": 1.5, "note": "からあげになんの感情も抱けなかった"}, {"shop": "Komi'z", "genre": "カレー", "user": "小林", "menu": "玉ねぎカレー", "taste": 3.5, "portion": 1.5, "price": 3.5, "ambience": 2.0, "speed": 2.0, "note": ""}, {"shop": "Komi'z", "genre": "カレー", "user": "月本", "menu": "トッピング色々", "taste": 3.5, "portion": 2.5, "price": 4.5, "ambience": 1.5, "speed": 2.0, "note": "やすめー　距離の加点がないことに留意せよ"}, {"shop": "Komi'z", "genre": "カレー", "user": "八代", "menu": "ねぎカレー", "taste": 3.5, "portion": 2.5, "price": 5.0, "ambience": 1.5, "speed": 1.5, "note": "圧倒的に安い。量もちゃんとある。味よし。距離と座席が少し狭いこと以外は文句なし"}, {"shop": "Komi'z", "genre": "カレー", "user": "川野", "menu": "玉ねぎカレー", "taste": 4.0, "portion": 2.0, "price": 5.0, "ambience": 1.5, "speed": 2.0, "note": "やすい。味ももちろんうまい！ランチ時間は50円引きで、から揚げトッピング50円。実質無料"}, {"shop": "和合餃子", "genre": "中華料理", "user": "月本", "menu": "辛炒め,よだれ鶏,チャーハン", "taste": 4.0, "portion": 2.5, "price": 4.0, "ambience": 1.5, "speed": 2.0, "note": "町中華風だが、意外と本格的。羽根つき餃子も必見。"}, {"shop": "和合餃子", "genre": "中華料理", "user": "八代", "menu": "汁なし麺系、クミン炒め、よだれ鶏", "taste": 4.5, "portion": 2.5, "price": 4.0, "ambience": 1.5, "speed": 2.0, "note": "大量の唐辛子をうまく躱せるかにすべてがかかっている"}, {"shop": "和合餃子", "genre": "中華料理", "user": "川野", "menu": "よだれ鶏", "taste": 5.0, "portion": 2.5, "price": 4.0, "ambience": 1.5, "speed": 2.0, "note": "よだれ鶏うますぎる。決定版"}, {"shop": "スペイン食堂 エルペケーニャ", "genre": "スペイン料理", "user": "月本", "menu": "カチョポ", "taste": 4.5, "portion": 2.0, "price": 2.5, "ambience": 2.5, "speed": 2.0, "note": "他にあんまないよ！スパニッシュ。1200円系。うまくおしゃれ。距離の加点がないことに留意"}, {"shop": "スペイン食堂 エルペケーニャ", "genre": "スペイン料理", "user": "川野", "menu": "カチョポ", "taste": 4.5, "portion": 2.0, "price": 0.5, "ambience": 2.5, "speed": 2.0, "note": "美味しかった。オシャレご飯ならあり。"}, {"shop": "神田 味坊", "genre": "中華料理", "user": "月本", "menu": "", "taste": 4.5, "portion": 2.5, "price": 3.5, "ambience": 2.0, "speed": 2.5, "note": "土日はランチメニューありません！　ラムメインで、やはり生姜焼き"}, {"shop": "神田 味坊", "genre": "中華料理", "user": "八代", "menu": "生姜焼き、クミン炒め", "taste": 4.5, "portion": 2.5, "price": 4.0, "ambience": 1.5, "speed": 2.5, "note": ""}, {"shop": "神田 味坊", "genre": "中華料理", "user": "山小瀬", "menu": "生姜焼き、クミン炒め", "taste": 3.0, "portion": 2.5, "price": 3.0, "ambience": 2.0, "speed": 2.5, "note": ""}, {"shop": "かぐらや", "genre": "そば・うどん", "user": "月本", "menu": "", "taste": 3.5, "portion": 1.5, "price": 3.5, "ambience": 2.0, "speed": 2.5, "note": ""}, {"shop": "かぐらや", "genre": "そば・うどん", "user": "八代", "menu": "かつ丼セットほか", "taste": 3.5, "portion": 2.5, "price": 3.5, "ambience": 1.5, "speed": 2.5, "note": "※丼セットは罠かも　外の看板にこっそりそば大盛り無料の記載。そば茶そば湯がセルフで嬉しい。そばの味もよし"}, {"shop": "一心", "genre": "その他和食", "user": "月本", "menu": "ランチ４種", "taste": 3.5, "portion": 2.5, "price": 4.0, "ambience": 1.5, "speed": 1.5, "note": "海外出張から帰ってきたらね、ここで煮付け定食の大根を食べるんですわ"}, {"shop": "一心", "genre": "その他和食", "user": "八代", "menu": "", "taste": 3.0, "portion": 2.0, "price": 4.5, "ambience": 1.5, "speed": 1.5, "note": "揚げ物はイマイチだった記憶　煮魚(おでん)が板"}, {"shop": "一心", "genre": "その他和食", "user": "山小瀬", "menu": "", "taste": 4.5, "portion": 2.5, "price": 4.0, "ambience": 2.0, "speed": 1.5, "note": "お腹にやさしい。"}, {"shop": "岩本町漁港 快海", "genre": "海鮮・寿司・焼き魚", "user": "月本", "menu": "全部", "taste": 5.0, "portion": 2.5, "price": 3.0, "ambience": 2.5, "speed": 1.5, "note": "海鮮系TOP Tierに挙げさせていただきます🐟"}, {"shop": "岩本町漁港 快海", "genre": "海鮮・寿司・焼き魚", "user": "八代", "menu": "海鮮丼", "taste": 5.0, "portion": 2.5, "price": 3.0, "ambience": 2.5, "speed": 1.5, "note": "この値段でこの味はすごい"}, {"shop": "岩本町漁港 快海", "genre": "海鮮・寿司・焼き魚", "user": "山小瀬", "menu": "海鮮丼", "taste": 5.0, "portion": 2.5, "price": 2.5, "ambience": 2.5, "speed": 2.0, "note": "美味い！刺身に新鮮さを感じる。信じられない価格。メニューは全制覇したい！本わさびっぽい。"}, {"shop": "岩本町漁港 快海", "genre": "海鮮・寿司・焼き魚", "user": "臼田", "menu": "銀鮭焼", "taste": 4.5, "portion": 2.5, "price": 3.0, "ambience": 2.5, "speed": 1.5, "note": "デカイ美味しい　海鮮丼とアジのたたき丼は売り切れで食べられなかった"}, {"shop": "沖縄料理と炉端焼き なんくるないさー", "genre": "その他（和食以外）", "user": "月本", "menu": "二郎チャンプルー", "taste": 2.5, "portion": 2.5, "price": 3.0, "ambience": 1.5, "speed": 2.5, "note": "おかずのほか、ソーキそばにご飯もつく"}, {"shop": "沖縄料理と炉端焼き なんくるないさー", "genre": "その他（和食以外）", "user": "八代", "menu": "二郎チャンプル、タコライス", "taste": 3.0, "portion": 2.5, "price": 3.0, "ambience": 2.0, "speed": 2.5, "note": ""}, {"shop": "沖縄料理と炉端焼き なんくるないさー", "genre": "その他（和食以外）", "user": "山小瀬", "menu": "ゴーヤチャンプル", "taste": 3.5, "portion": 1.5, "price": 1.5, "ambience": 1.5, "speed": 2.5, "note": "ちょっと濃いめの味付けであったが美味しかった。"}, {"shop": "ジュークステーキ", "genre": "ステーキ", "user": "月本", "menu": "だいたい", "taste": 3.5, "portion": 2.5, "price": 2.5, "ambience": 2.0, "speed": 1.5, "note": "鉄板乗ってる系ハンバーグに昼行きたいなら"}, {"shop": "ジュークステーキ", "genre": "ステーキ", "user": "八代", "menu": "野菜のやつ、ガーリックライス", "taste": 3.5, "portion": 2.5, "price": 2.5, "ambience": 2.0, "speed": 1.0, "note": "野菜盛りの野菜の量がかなり多くて良い。健康ぶって頼むのにバカだから塩追加してトントンになってしまう"}, {"shop": "ジュークステーキ", "genre": "ステーキ", "user": "山小瀬", "menu": "", "taste": 2.5, "portion": 2.5, "price": 2.0, "ambience": 1.5, "speed": 1.5, "note": ""}, {"shop": "ジュークステーキ", "genre": "ステーキ", "user": "臼田", "menu": "ガーリックライス", "taste": 3.5, "portion": 2.0, "price": 3.0, "ambience": 2.0, "speed": 1.5, "note": "味濃いめ。パンチのあるものを欲するときに"}, {"shop": "煉", "genre": "そば・うどん", "user": "月本", "menu": "だいたい", "taste": 4.0, "portion": 2.0, "price": 3.5, "ambience": 2.5, "speed": 1.0, "note": "半地下で日光見えつつ薄暗く落ち着く　メニューによっては物足りなさがある"}, {"shop": "煉", "genre": "そば・うどん", "user": "八代", "menu": "カレーランチ", "taste": 4.0, "portion": 2.5, "price": 3.5, "ambience": 2.5, "speed": 1.5, "note": "山椒付きのカレーがうまい　カレー屋なのか蕎麦屋なのか　並ぶこともあるが入ってからは早い"}, {"shop": "煉", "genre": "そば・うどん", "user": "臼田", "menu": "豚ランチ", "taste": 3.5, "portion": 1.5, "price": 3.5, "ambience": 2.0, "speed": 1.5, "note": "メニューわかりにくい　次はカレーとそばのセット"}, {"shop": "すゞ太郎", "genre": "海鮮・寿司・焼き魚", "user": "月本", "menu": "すずき,いわし", "taste": 4.0, "portion": 1.0, "price": 3.5, "ambience": 2.0, "speed": 2.5, "note": "ついに繰り出した神田駅西側。臼田さんさじぇすちょん。純刺身の定食系ならかなり。距離1点です。"}, {"shop": "すゞ太郎", "genre": "海鮮・寿司・焼き魚", "user": "八代", "menu": "カツオ、いわし", "taste": 4.0, "portion": 1.0, "price": 2.5, "ambience": 2.0, "speed": 2.5, "note": "刺身は新鮮でおいしかった。いわしってあんま自分から食わないけど良かった　ちょっと量が少ないかなー"}, {"shop": "すゞ太郎", "genre": "海鮮・寿司・焼き魚", "user": "山小瀬", "menu": "", "taste": 4.0, "portion": 1.0, "price": 3.5, "ambience": 1.5, "speed": 2.5, "note": "魚の新鮮さがわかる。いいものを食べた満足感あり。"}, {"shop": "すゞ太郎", "genre": "海鮮・寿司・焼き魚", "user": "臼田", "menu": "鯛、いわし", "taste": 4.5, "portion": 1.0, "price": 3.0, "ambience": 2.0, "speed": 2.5, "note": "量は少なめだけど刺身は新鮮"}, {"shop": "魚金", "genre": "海鮮・寿司・焼き魚", "user": "月本", "menu": "茶漬け、タイカブト(日替わり)", "taste": 4.0, "portion": 2.5, "price": 2.5, "ambience": 2.0, "speed": 2.5, "note": "オフィスビル内に広い店内、落ち着きあり。初見分からないでしょう。"}, {"shop": "魚金", "genre": "海鮮・寿司・焼き魚", "user": "八代", "menu": "帆立クリームコロッケ", "taste": 3.5, "portion": 2.5, "price": 3.5, "ambience": 2.0, "speed": 2.5, "note": "唐揚げ頼んだ人がかわいそうだった"}, {"shop": "魚金", "genre": "海鮮・寿司・焼き魚", "user": "山小瀬", "menu": "", "taste": 4.0, "portion": 2.5, "price": 3.0, "ambience": 1.5, "speed": 1.5, "note": "ちょうどよい和定食"}, {"shop": "魚金", "genre": "海鮮・寿司・焼き魚", "user": "臼田", "menu": "タイカブト", "taste": 4.0, "portion": 2.0, "price": 3.0, "ambience": 2.0, "speed": 2.5, "note": "食べ応えあり"}, {"shop": "杉のあかり", "genre": "その他和食", "user": "月本", "menu": "色々", "taste": 4.0, "portion": 2.5, "price": 3.5, "ambience": 2.5, "speed": 1.0, "note": "潜って人があふれてる時のあーね感たるや　半個室で薄暗く、落ち着く店内"}, {"shop": "杉のあかり", "genre": "その他和食", "user": "八代", "menu": "日替わり", "taste": 4.5, "portion": 2.5, "price": 3.5, "ambience": 2.5, "speed": 1.0, "note": "遅い早いというより入れるか入れないか 入れれば早い　刺身と日替わりに現れるアジフライが絶品"}, {"shop": "杉のあかり", "genre": "その他和食", "user": "山小瀬", "menu": "", "taste": 4.5, "portion": 2.5, "price": 2.5, "ambience": 2.0, "speed": 2.5, "note": "刺身がついてくるので満足度が上がる。味もよく、リピートしたいと思った"}, {"shop": "釜あげスパゲッティ すぱじろう", "genre": "パスタ・イタリアン", "user": "月本", "menu": "限定(夏野菜)", "taste": 3.5, "portion": 2.5, "price": 3.0, "ambience": 2.5, "speed": 1.5, "note": "パスタのイメージとは裏腹、ボリュームには満足できるはず。塩分ヤバそうｗ"}, {"shop": "釜あげスパゲッティ すぱじろう", "genre": "パスタ・イタリアン", "user": "八代", "menu": "限定(トマト系ベーコン)", "taste": 3.5, "portion": 2.5, "price": 3.0, "ambience": 2.5, "speed": 1.5, "note": "大盛無料。味もそこそこ高評価。スープ系も食べてみたい"}, {"shop": "釜あげスパゲッティ すぱじろう", "genre": "パスタ・イタリアン", "user": "山小瀬", "menu": "", "taste": 2.5, "portion": 2.5, "price": 4.0, "ambience": 1.5, "speed": 1.5, "note": "量は多いが、少なくして安くしてほしいと思った。"}, {"shop": "釜あげスパゲッティ すぱじろう", "genre": "パスタ・イタリアン", "user": "臼田", "menu": "", "taste": 3.5, "portion": 2.5, "price": 2.5, "ambience": 2.5, "speed": 1.5, "note": "夏野菜ペペロンチーノ1480円少し高い"}, {"shop": "ハンバーグの店 ベア", "genre": "洋食", "user": "月本", "menu": "", "taste": 4.0, "portion": 2.5, "price": 4.5, "ambience": 2.5, "speed": 1.5, "note": "驚愕の750円。味もよし。しかも豚汁付き。狭いので二人とかで"}, {"shop": "ハンバーグの店 ベア", "genre": "洋食", "user": "山小瀬", "menu": "", "taste": 2.5, "portion": 1.0, "price": 3.5, "ambience": 1.0, "speed": 1.5, "note": "昔ながら感がびみょう。"}, {"shop": "ハンバーグの店 ベア", "genre": "洋食", "user": "臼田", "menu": "", "taste": 3.5, "portion": 2.0, "price": 4.5, "ambience": 2.5, "speed": 1.5, "note": "ハンバーグ、カニクリームコロッケ、キャベツの千切り、みそ汁、ごはんで750円"}, {"shop": "中華料理店 食福", "genre": "中華料理", "user": "八代", "menu": "麻婆丼", "taste": 4.0, "portion": 2.5, "price": 4.5, "ambience": 1.5, "speed": 2.0, "note": "ひさしぶりに行ったらめっちゃ良くて感動　王道町中華　あり得ないくらいホールテンパってて笑った"}, {"shop": "とんかつ藤芳", "genre": "その他和食", "user": "月本", "menu": "", "taste": 4.5, "portion": 2.5, "price": 3.0, "ambience": 2.0, "speed": 1.5, "note": "うまいとんかつ　だけじゃない、シューマイやささみかつがよい"}, {"shop": "とんかつ藤芳", "genre": "その他和食", "user": "八代", "menu": "", "taste": 4.0, "portion": 2.5, "price": 3.0, "ambience": 2.0, "speed": 1.5, "note": "うまいけどちょっと重ため"}, {"shop": "とんかつ藤芳", "genre": "その他和食", "user": "山小瀬", "menu": "", "taste": 3.5, "portion": 2.5, "price": 2.5, "ambience": 1.5, "speed": 1.5, "note": "テーブルがちょっと小さ目"}, {"shop": "とんかつ藤芳", "genre": "その他和食", "user": "臼田", "menu": "", "taste": 4.5, "portion": 2.0, "price": 3.0, "ambience": 2.0, "speed": 1.5, "note": ""}, {"shop": "麺ZINさいとう", "genre": "ラーメン", "user": "月本", "menu": "ちゃんぽんみたいなやつ", "taste": 4.0, "portion": 2.5, "price": 2.5, "ambience": 1.5, "speed": 2.0, "note": "ランチメニューはちゃんぽんぽいの一つのみ　Gmapのレビュー高すぎ　おいしいけどね"}, {"shop": "麺ZINさいとう", "genre": "ラーメン", "user": "八代", "menu": "", "taste": 4.0, "portion": 2.5, "price": 2.5, "ambience": 1.5, "speed": 1.5, "note": "かなり好きな味だった　もうちょい寒くなったらまた行きたい"}, {"shop": "ロティタイム", "genre": "カレー", "user": "月本", "menu": "", "taste": 3.5, "portion": 2.5, "price": 3.5, "ambience": 2.0, "speed": 2.0, "note": "第二のミートガーデンすぎる　　こちらのチーズナンの方が暴力的じゃなくて平和"}, {"shop": "ロティタイム", "genre": "カレー", "user": "八代", "menu": "", "taste": 3.5, "portion": 2.5, "price": 3.5, "ambience": 2.0, "speed": 2.0, "note": "理性"}, {"shop": "麹蔵", "genre": "その他和食", "user": "月本", "menu": "", "taste": 4.0, "portion": 2.5, "price": 4.0, "ambience": 2.5, "speed": 2.5, "note": "忘れてたのを後悔　擦ってよさそう"}, {"shop": "麹蔵", "genre": "その他和食", "user": "八代", "menu": "", "taste": 4.0, "portion": 2.5, "price": 3.5, "ambience": 2.5, "speed": 2.0, "note": ""}, {"shop": "麹蔵", "genre": "その他和食", "user": "山小瀬", "menu": "", "taste": 4.0, "portion": 2.5, "price": 3.5, "ambience": 2.5, "speed": 2.0, "note": "豚汁が満足度を高めてくれる。"}, {"shop": "麹蔵", "genre": "その他和食", "user": "臼田", "menu": "", "taste": 4.0, "portion": 2.0, "price": 3.5, "ambience": 2.5, "speed": 2.0, "note": ""}, {"shop": "陳家私菜", "genre": "中華料理", "user": "月本", "menu": "麻婆豆腐　刀削麺", "taste": 4.0, "portion": 2.5, "price": 3.5, "ambience": 1.5, "speed": 1.5, "note": "本格マーボーの有名店　人気故並ぶが、席数は多い"}, {"shop": "陳家私菜", "genre": "中華料理", "user": "八代", "menu": "麻婆豆腐、冷やし麻辣麺", "taste": 4.0, "portion": 2.5, "price": 3.5, "ambience": 2.0, "speed": 1.0, "note": "麻婆豆腐がうまい　麻辣麺はふつう"}, {"shop": "陳家私菜", "genre": "中華料理", "user": "山小瀬", "menu": "麻婆豆腐", "taste": 5.0, "portion": 2.5, "price": 3.5, "ambience": 2.5, "speed": 2.0, "note": "期待以上の中華で満足度は高かった。辛さ控えたチョイスが必要"}, {"shop": "陳家私菜", "genre": "中華料理", "user": "臼田", "menu": "麻婆豆腐、よだれ鶏", "taste": 5.0, "portion": 2.5, "price": 4.5, "ambience": 1.5, "speed": 1.5, "note": ""}, {"shop": "胡椒饅頭PAOPAO", "genre": "中華料理", "user": "月本", "menu": "", "taste": 4.0, "portion": 2.5, "price": 3.0, "ambience": 2.5, "speed": 1.5, "note": "マーボー日本カスタム　テレビ系に出がちな店"}, {"shop": "胡椒饅頭PAOPAO", "genre": "中華料理", "user": "八代", "menu": "麻婆豆腐", "taste": 4.0, "portion": 2.5, "price": 3.0, "ambience": 2.5, "speed": 2.0, "note": "ユニーク　中華料理食べたくて行く店ではない　胡椒食べたくて行く店"}, {"shop": "胡椒饅頭PAOPAO", "genre": "中華料理", "user": "山小瀬", "menu": "", "taste": 4.0, "portion": 1.5, "price": 2.0, "ambience": 2.0, "speed": 1.5, "note": "コショウを試しながら楽しむよさがある"}, {"shop": "サバイサバイタイ屋台", "genre": "アジア・エスニック", "user": "月本", "menu": "カオソイ パッタイ", "taste": 3.5, "portion": 2.5, "price": 4.0, "ambience": 2.0, "speed": 1.5, "note": "バンコックポニーに対してこちらの方が現地の味感がある。生春巻きが付いてくる！"}, {"shop": "サバイサバイタイ屋台", "genre": "アジア・エスニック", "user": "八代", "menu": "カオソイ", "taste": 3.5, "portion": 2.5, "price": 4.0, "ambience": 2.5, "speed": 1.5, "note": "味はポニーには劣るかな 現地っぽい空気感はかなり良い"}, {"shop": "サバイサバイタイ屋台", "genre": "アジア・エスニック", "user": "山小瀬", "menu": "カオソイ", "taste": 2.5, "portion": 1.5, "price": 2.5, "ambience": 1.5, "speed": 1.5, "note": "マイルドなタイ料理といった感じ。変化をつけたい時にいいかも"}, {"shop": "たつみ屋", "genre": "その他（和食以外）", "user": "月本", "menu": "ハムカツ", "taste": 3.5, "portion": 2.5, "price": 3.0, "ambience": 2.0, "speed": 2.5, "note": "向かいの店(酔っ手羽)と似てるｗ　こっちのが高いけどボリューミーかつうまい"}, {"shop": "居酒屋革命　酔っ手羽", "genre": "その他（和食以外）", "user": "月本", "menu": "アジフライ、ユーリンチー", "taste": 3.0, "portion": 2.5, "price": 3.5, "ambience": 1.5, "speed": 2.5, "note": "激得ポイントカード、廃止された説。値段Pは10→7に。※一回200円の火力があった"}, {"shop": "居酒屋革命　酔っ手羽", "genre": "その他（和食以外）", "user": "八代", "menu": "茶色いもの", "taste": 3.0, "portion": 2.5, "price": 3.5, "ambience": 1.5, "speed": 2.0, "note": "空いてる割に提供はあまり早くない印象　味も普通"}, {"shop": "肉蕎麦 五六八", "genre": "そば・うどん", "user": "小林", "menu": "", "taste": 4.0, "portion": 2.5, "price": 4.0, "ambience": 1.5, "speed": 2.0, "note": "角煮うまし"}, {"shop": "肉蕎麦 五六八", "genre": "そば・うどん", "user": "月本", "menu": "", "taste": 4.0, "portion": 2.5, "price": 3.0, "ambience": 2.0, "speed": 2.0, "note": "陸人が\"良い\"ことなんて赤ちゃんでも分かるでしょ　あえてこっちを推すんですわ"}, {"shop": "肉蕎麦 五六八", "genre": "そば・うどん", "user": "八代", "menu": "", "taste": 3.5, "portion": 2.5, "price": 3.0, "ambience": 1.5, "speed": 2.0, "note": "↑逆張りすぎ　時代は順張り"}, {"shop": "肉蕎麦 五六八", "genre": "そば・うどん", "user": "臼田", "menu": "", "taste": 4.0, "portion": 2.5, "price": 3.0, "ambience": 1.5, "speed": 2.0, "note": ""}, {"shop": "無銘", "genre": "ラーメン", "user": "月本", "menu": "醤油", "taste": 4.0, "portion": 2.5, "price": 4.0, "ambience": 1.5, "speed": 2.0, "note": "超ポタージュスープ　ラーメン屋多しといえどここまではレア　ラ好きは一見の価値あり"}, {"shop": "無銘", "genre": "ラーメン", "user": "八代", "menu": "醤油", "taste": 4.0, "portion": 2.5, "price": 3.5, "ambience": 2.0, "speed": 2.0, "note": "ポタージュ系のスープがうまい 醤油ペーストと卓上調味料で味変も楽しめる　平打ち麺も食べ応えあってgood"}, {"shop": "無銘", "genre": "ラーメン", "user": "山小瀬", "menu": "", "taste": 5.0, "portion": 2.5, "price": 3.5, "ambience": 1.5, "speed": 1.0, "note": "洋風な味付けに思う。とても美味しく、何度も通いたくなる。"}, {"shop": "町役場", "genre": "その他和食", "user": "月本", "menu": "", "taste": 3.0, "portion": 2.5, "price": 4.0, "ambience": 1.5, "speed": 2.5, "note": "駅横の地下。案外落ち着く。昭和。"}, {"shop": "町役場", "genre": "その他和食", "user": "山小瀬", "menu": "", "taste": 2.5, "portion": 2.5, "price": 3.5, "ambience": 1.5, "speed": 1.5, "note": ""}, {"shop": "町役場", "genre": "その他和食", "user": "臼田", "menu": "", "taste": 3.0, "portion": 2.0, "price": 4.0, "ambience": 1.5, "speed": 2.0, "note": ""}, {"shop": "小料理屋すなお", "genre": "その他和食", "user": "月本", "menu": "生姜焼き　チャーハン", "taste": 4.5, "portion": 2.0, "price": 3.5, "ambience": 2.5, "speed": 1.5, "note": "食後、階段下りて外までお見送りしてくれる　圧倒的感謝"}, {"shop": "小料理屋すなお", "genre": "その他和食", "user": "臼田", "menu": "", "taste": 4.5, "portion": 2.0, "price": 3.0, "ambience": 2.5, "speed": 1.5, "note": ""}, {"shop": "鬼金棒Lab", "genre": "ラーメン", "user": "月本", "menu": "", "taste": 4.0, "portion": 1.5, "price": 1.5, "ambience": 2.0, "speed": 2.5, "note": "コンセプトがおもろいでしょ！　(未完成品食わすのか(クレーマー))"}, {"shop": "鬼金棒Lab", "genre": "ラーメン", "user": "八代", "menu": "牛骨ラーメン", "taste": 5.0, "portion": 2.5, "price": 0.5, "ambience": 2.5, "speed": 2.5, "note": "うまい！！！ベースはマイルドだけど卓上調味料で完全に鬼金棒のシビカラになる。高い！！！"}, {"shop": "鬼金棒Lab", "genre": "ラーメン", "user": "臼田", "menu": "", "taste": 4.0, "portion": 2.0, "price": 1.0, "ambience": 2.0, "speed": 2.0, "note": ""}, {"shop": "ポアル館", "genre": "洋食", "user": "月本", "menu": "", "taste": 4.0, "portion": 2.5, "price": 4.0, "ambience": 2.5, "speed": 2.0, "note": "\"良い\"　昭和な感じだがざわざわ感もなく、落ち着く…　ジェンコ+とんとん亭÷2みたいなイメージ"}, {"shop": "ポアル館", "genre": "洋食", "user": "山小瀬", "menu": "", "taste": 4.0, "portion": 2.5, "price": 4.0, "ambience": 1.5, "speed": 1.5, "note": "ボリュームがある。コスパ良し"}, {"shop": "ポアル館", "genre": "洋食", "user": "臼田", "menu": "", "taste": 4.0, "portion": 2.0, "price": 4.0, "ambience": 2.0, "speed": 1.5, "note": ""}, {"shop": "讃岐うどん 豐香", "genre": "そば・うどん", "user": "月本", "menu": "", "taste": 3.5, "portion": 1.5, "price": 3.0, "ambience": 1.5, "speed": 1.5, "note": ""}, {"shop": "讃岐うどん 豐香", "genre": "そば・うどん", "user": "山小瀬", "menu": "", "taste": 3.5, "portion": 2.0, "price": 2.5, "ambience": 1.5, "speed": 0.5, "note": "かきあげと一緒に食えば、満足度があがる。リピートしたい"}, {"shop": "讃岐うどん 豐香", "genre": "そば・うどん", "user": "臼田", "menu": "", "taste": 4.5, "portion": 2.0, "price": 2.5, "ambience": 2.0, "speed": 1.5, "note": ""}, {"shop": "蓬渓閣", "genre": "中華料理", "user": "月本", "menu": "", "taste": 3.0, "portion": 2.5, "price": 4.5, "ambience": 1.5, "speed": 2.0, "note": "メニュー豊富。気分転換がてらこっちの方向に歩き出しちゃったら全然あり。"}, {"shop": "洋食工房 ジェンコ", "genre": "洋食", "user": "月本", "menu": "", "taste": 4.5, "portion": 1.5, "price": 3.5, "ambience": 2.5, "speed": 1.5, "note": "カニクリームコロッケNo.1ですねここが"}, {"shop": "洋食工房 ジェンコ", "genre": "洋食", "user": "山小瀬", "menu": "", "taste": 5.0, "portion": 2.5, "price": 3.5, "ambience": 1.5, "speed": 1.0, "note": "大好きで、一人の時はけっこう行ってます。"}, {"shop": "洋食工房 ジェンコ", "genre": "洋食", "user": "臼田", "menu": "", "taste": 4.5, "portion": 1.5, "price": 3.5, "ambience": 2.5, "speed": 1.5, "note": ""}, {"shop": "すりみや", "genre": "その他和食", "user": "月本", "menu": "", "taste": 3.5, "portion": 2.5, "price": 4.0, "ambience": 2.0, "speed": 2.0, "note": "茶飯おかわり可能　なかなか落ち着く　おでんのランチは一心かここしかないのでは"}, {"shop": "すりみや", "genre": "その他和食", "user": "山小瀬", "menu": "", "taste": 3.5, "portion": 2.5, "price": 2.5, "ambience": 2.0, "speed": 2.0, "note": "穴場感あり。やさしい味。"}, {"shop": "すりみや", "genre": "その他和食", "user": "臼田", "menu": "", "taste": 4.0, "portion": 2.5, "price": 3.5, "ambience": 2.0, "speed": 2.0, "note": ""}, {"shop": "はしや", "genre": "その他和食", "user": "八代", "menu": "", "taste": 3.5, "portion": 2.5, "price": 4.5, "ambience": 2.0, "speed": 1.5, "note": "安い・早くはない・うまい　ちょい遠くてちょい待ちづらいのがマイナス"}, {"shop": "はしや", "genre": "その他和食", "user": "山小瀬", "menu": "", "taste": 4.0, "portion": 2.5, "price": 5.0, "ambience": 2.0, "speed": 1.5, "note": "とんかつ屋。安い。みそかつ有り。"}];
+
+// 店名ごとにまとめてPlaces検索
+let placeCache = {}; // shopName -> {placeId, lat, lng, address, name} or null
+let notFound = [];
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function addLog(msg, cls='') {
+  const div = document.createElement('div');
+  div.className = cls;
+  div.textContent = msg;
+  document.getElementById('log').appendChild(div);
+  document.getElementById('log').scrollTop = 99999;
+}
+
+function searchPlace(shopName, svc) {
+  return new Promise(resolve => {
+    svc.findPlaceFromQuery(
+      { query: shopName + ' 秋葉原 岩本町', fields: ['name','formatted_address','geometry','place_id'] },
+      (results, status) => {
+        if (status === google.maps.places.PlacesServiceStatus.OK && results && results[0]) {
+          const p = results[0];
+          resolve({
+            placeId: p.place_id,
+            name: p.name,
+            address: p.formatted_address,
+            lat: p.geometry.location.lat(),
+            lng: p.geometry.location.lng(),
+          });
+        } else {
+          resolve(null);
+        }
+      }
+    );
+  });
+}
+
+window.startImport = async function() {
+  document.getElementById('startBtn').disabled = true;
+  const total = RECORDS.length;
+  document.getElementById('prog-text').textContent = '0 / ' + total;
+
+  const mapDiv = document.createElement('div');
+  mapDiv.style.display = 'none';
+  document.body.appendChild(mapDiv);
+  const { Map } = await google.maps.importLibrary("maps");
+  const { PlacesService } = await google.maps.importLibrary("places");
+  const map = new Map(mapDiv, { center: { lat: 35.698, lng: 139.775 }, zoom: 15 });
+  const svc = new PlacesService(map);
+
+  // 店名一覧を重複排除してPlaces検索
+  const shopNames = [...new Set(RECORDS.map(r => r.shop))];
+  addLog('=== お店を検索中 (' + shopNames.length + '店) ===');
+
+  for (const shopName of shopNames) {
+    const result = await searchPlace(shopName, svc);
+    if (result) {
+      placeCache[shopName] = result;
+      addLog('✅ 見つかった: ' + shopName + ' → ' + result.name, 'log-ok');
+    } else {
+      placeCache[shopName] = null;
+      notFound.push(shopName);
+      addLog('⚠️ 見つからない: ' + shopName, 'log-skip');
+    }
+    await sleep(200);
+  }
+
+  addLog('=== Firebaseに登録中 ===');
+
+  let done = 0, skipped = 0, saved = 0;
+  for (const rec of RECORDS) {
+    done++;
+    const place = placeCache[rec.shop];
+    if (!place) {
+      addLog('スキップ: ' + rec.shop + ' / ' + rec.user + ' (お店不明)', 'log-skip');
+      skipped++;
+    } else {
+      try {
+        await window._addDoc(window._collection(window._db, 'reviews'), {
+          placeId: place.placeId,
+          shopName: place.name,
+          shopAddress: place.address,
+          lat: place.lat,
+          lng: place.lng,
+          userName: rec.user,
+          ratings: {
+            taste: rec.taste,
+            portion: rec.portion,
+            price: rec.price,
+            ambience: rec.ambience,
+            speed: rec.speed,
+          },
+          walkMin: null,
+          genres: [rec.genre],
+          menu: rec.menu,
+          note: rec.note,
+          createdAt: new Date().toISOString(),
+        });
+        saved++;
+        addLog('登録: ' + rec.shop + ' / ' + rec.user, 'log-ok');
+      } catch(e) {
+        addLog('エラー: ' + rec.shop + ' / ' + rec.user + ' - ' + e.message, 'log-err');
+      }
+      await sleep(50);
+    }
+
+    const pct = Math.round(done / total * 100);
+    document.getElementById('prog-bar').style.width = pct + '%';
+    document.getElementById('prog-text').textContent = done + ' / ' + total;
+  }
+
+  addLog('=== 完了! 登録: ' + saved + '件 / スキップ: ' + skipped + '件 ===', 'log-ok');
+
+  if (notFound.length > 0) {
+    document.getElementById('not-found').style.display = 'block';
+    document.getElementById('not-found-list').innerHTML = notFound.map(s => '・' + s).join('<br>');
+  }
+};
+</script>
+
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBp-ufjhkc9R3Fls-tRoGlXMAAsWGCzuxU&libraries=places&loading=async" async defer></script>
+</body>
+</html>

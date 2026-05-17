@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>データ追加ツール</title>
+<style>
+  body { font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #f5f5f5; }
+  .card { background: white; border-radius: 16px; padding: 32px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); max-width: 400px; width: 100%; text-align: center; }
+  h2 { color: #173D8D; margin-bottom: 8px; }
+  p { color: #666; font-size: 14px; margin-bottom: 24px; }
+  button { padding: 14px 32px; background: #173D8D; color: white; border: none; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; width: 100%; }
+  button:disabled { background: #ccc; }
+  #status { margin-top: 16px; font-size: 14px; font-weight: 600; }
+  .success { color: #4CAF50; }
+  .error { color: #e53935; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h2>🍜 データ追加ツール</h2>
+  <p>「麦蕎麦 陸人」の八代さんの評価をFirebaseに追加します</p>
+  <button id="btn" onclick="addReview()">追加する</button>
+  <div id="status"></div>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getFirestore, addDoc, collection } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCHIxKeZr_iA_K9XSSgteZjez7TnZIk1CM",
+    authDomain: "kai-lunch-map-d16d0.firebaseapp.com",
+    projectId: "kai-lunch-map-d16d0",
+    storageBucket: "kai-lunch-map-d16d0.firebasestorage.app",
+    messagingSenderId: "107069095031",
+    appId: "1:107069095031:web:0a107a881ae79b63dcda72",
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  window.addReview = async function() {
+    const btn = document.getElementById('btn');
+    const status = document.getElementById('status');
+    btn.disabled = true;
+    btn.textContent = '追加中...';
+
+    try {
+      await addDoc(collection(db, 'reviews'), {
+        placeId: "ChIJN_rikujin_iwamotocho_kai", // ユニークなID
+        shopName: "麦蕎麦 陸人",
+        shopAddress: "東京都千代田区神田佐久間町3-14-2 the akiba mix r+s 1F",
+        lat: 35.6976,
+        lng: 139.7753,
+        userName: "八代",
+        ratings: {
+          taste:    5,
+          portion:  5,
+          price:    4,
+          ambience: 5,
+          speed:    3,
+        },
+        walkMin: 7,
+        genres: ["そば・うどん"],
+        menu: "とろろ蕎麦",
+        note: "うますぎ　日曜に行くと柴犬がいる　並んでも意外と時間かからない",
+        createdAt: new Date().toISOString()
+      });
+
+      status.className = 'success';
+      status.textContent = '✅ 追加しました！このページは閉じてOKです。';
+    } catch(e) {
+      status.className = 'error';
+      status.textContent = '❌ エラー: ' + e.message;
+      btn.disabled = false;
+      btn.textContent = '追加する';
+    }
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>味坊データ修正ツール</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: sans-serif; background: #f5f5f5; padding: 20px; }
+  .card { background: white; border-radius: 16px; padding: 24px; max-width: 640px; margin: 0 auto; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+  h2 { color: #173D8D; margin-bottom: 8px; }
+  p { color: #666; font-size: 13px; margin-bottom: 16px; line-height: 1.6; }
+  button { padding: 12px 24px; background: #173D8D; color: white; border: none; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; }
+  button:disabled { background: #ccc; cursor: not-allowed; }
+  #log { margin-top: 16px; max-height: 500px; overflow-y: auto; font-size: 12px; font-family: monospace; background: #f9f9f9; border-radius: 8px; padding: 12px; }
+  .ok { color: #4CAF50; } .err { color: #e53935; } .info { color: #173D8D; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h2>🔧 香福味坊・神田味坊 修正ツール</h2>
+  <p>
+    ① Firebaseの香福味坊・神田味坊のデータを全削除<br>
+    ② Places APIで正しい座標を取得<br>
+    ③ 正しいデータを新規登録
+  </p>
+  <button id="startBtn" onclick="startFix()">修正開始</button>
+  <div id="log"></div>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getFirestore, collection, getDocs, doc, deleteDoc, addDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  const app = initializeApp({
+    apiKey: "AIzaSyCHIxKeZr_iA_K9XSSgteZjez7TnZIk1CM",
+    authDomain: "kai-lunch-map-d16d0.firebaseapp.com",
+    projectId: "kai-lunch-map-d16d0",
+    storageBucket: "kai-lunch-map-d16d0.firebasestorage.app",
+    messagingSenderId: "107069095031",
+    appId: "1:107069095031:web:0a107a881ae79b63dcda72",
+  });
+  const db = getFirestore(app);
+  window._db = db;
+  window._fns = { collection, getDocs, doc, deleteDoc, addDoc };
+</script>
+
+<script>
+const OFFICE_LAT = 35.6969, OFFICE_LNG = 139.7782;
+
+function calcWalkMin(lat, lng) {
+  const R = 6371000;
+  const dLat = (lat-OFFICE_LAT)*Math.PI/180, dLng = (lng-OFFICE_LNG)*Math.PI/180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(OFFICE_LAT*Math.PI/180)*Math.cos(lat*Math.PI/180)*Math.sin(dLng/2)**2;
+  return Math.max(1, Math.round(R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a))*1.3/80));
+}
+
+const KOUFUKU_RECORDS = [
+  {user:'月本', menu:'色々', taste:3.5, portion:2.5, price:3.5, ambience:2.0, speed:1.5, note:'白身魚のうま煮←やば辛　広く大人数でも入れるが、待ちはする　バイキングあり'},
+  {user:'八代', menu:'色々', taste:3.5, portion:2.5, price:3.5, ambience:2.0, speed:1.5, note:'辛いものはめちゃくちゃ辛い。ラム系が旨い。ラーメンセット多すぎがち'},
+  {user:'川野', menu:'色々', taste:3.0, portion:1.5, price:4.0, ambience:1.5, speed:1.5, note:'辛いがおいしい。待ち時間はその日によるが待つことも多い'},
+];
+
+const KANDA_RECORDS = [
+  {user:'月本', menu:'', taste:4.5, portion:2.5, price:3.5, ambience:2.0, speed:2.5, note:'土日はランチメニューありません！　ラムメインで、やはり生姜焼き'},
+  {user:'八代', menu:'生姜焼き、クミン炒め', taste:4.5, portion:2.5, price:4.0, ambience:1.5, speed:2.5, note:''},
+  {user:'山小瀬', menu:'生姜焼き、クミン炒め', taste:3.0, portion:2.5, price:3.0, ambience:2.0, speed:2.5, note:''},
+];
+
+function addLog(msg, cls='') {
+  const div = document.createElement('div');
+  div.className = cls; div.textContent = msg;
+  document.getElementById('log').appendChild(div);
+  document.getElementById('log').scrollTop = 99999;
+}
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function searchPlace(query, svc) {
+  return new Promise(resolve => {
+    svc.findPlaceFromQuery(
+      { query, fields: ['name','formatted_address','geometry','place_id'] },
+      (results, status) => {
+        if (status === google.maps.places.PlacesServiceStatus.OK && results?.[0]) {
+          const p = results[0];
+          resolve({ placeId: p.place_id, name: p.name, address: p.formatted_address, lat: p.geometry.location.lat(), lng: p.geometry.location.lng() });
+        } else resolve(null);
+      }
+    );
+  });
+}
+
+window.initMap = async function() {};
+
+window.startFix = async function() {
+  document.getElementById('startBtn').disabled = true;
+  const { collection, getDocs, doc, deleteDoc, addDoc } = window._fns;
+
+  // Maps初期化
+  const mapDiv = document.createElement('div');
+  mapDiv.style.cssText = 'width:1px;height:1px;position:fixed;top:0;left:0;';
+  document.body.appendChild(mapDiv);
+  const { Map } = await google.maps.importLibrary("maps");
+  const { PlacesService } = await google.maps.importLibrary("places");
+  const map = new Map(mapDiv, { center: { lat: 35.698, lng: 139.775 }, zoom: 15 });
+  const svc = new PlacesService(map);
+
+  // Step1: Firebaseから香福味坊・神田味坊を全削除
+  addLog('=== Step1: 既存データを削除 ===', 'info');
+  const snap = await getDocs(collection(window._db, 'reviews'));
+  const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const targets = all.filter(r => r.shopName && (r.shopName.includes('味坊') || r.shopName.includes('香福')));
+  addLog(`削除対象: ${targets.length}件`, 'info');
+  for (const r of targets) {
+    await deleteDoc(doc(window._db, 'reviews', r.id));
+    addLog(`🗑️ 削除: ${r.shopName} / ${r.userName}`, 'info');
+    await sleep(50);
+  }
+
+  // Step2: Places APIで正しい座標を取得
+  addLog('=== Step2: お店を検索 ===', 'info');
+  const koufukuPlace = await searchPlace('香福味坊 神田佐久間町1丁目21 千代田区', svc);
+  if (!koufukuPlace) { addLog('❌ 香福味坊が見つかりません', 'err'); return; }
+  addLog(`✅ 香福味坊: ${koufukuPlace.name} (${koufukuPlace.lat.toFixed(5)}, ${koufukuPlace.lng.toFixed(5)})`, 'ok');
+  await sleep(300);
+
+  const kandaPlace = await searchPlace('神田味坊 鍛冶町2丁目11 千代田区', svc);
+  if (!kandaPlace) { addLog('❌ 神田味坊が見つかりません', 'err'); return; }
+  addLog(`✅ 神田味坊: ${kandaPlace.name} (${kandaPlace.lat.toFixed(5)}, ${kandaPlace.lng.toFixed(5)})`, 'ok');
+  await sleep(300);
+
+  // Step3: 正しいデータを登録
+  addLog('=== Step3: データを登録 ===', 'info');
+
+  for (const rec of KOUFUKU_RECORDS) {
+    const walkMin = calcWalkMin(koufukuPlace.lat, koufukuPlace.lng);
+    await addDoc(collection(window._db, 'reviews'), {
+      placeId: koufukuPlace.placeId, shopName: koufukuPlace.name,
+      shopAddress: koufukuPlace.address, lat: koufukuPlace.lat, lng: koufukuPlace.lng,
+      userName: rec.user, ratings: { taste: rec.taste, portion: rec.portion, price: rec.price, ambience: rec.ambience, speed: rec.speed },
+      walkMin, genres: ['中華料理'], menu: rec.menu, note: rec.note,
+      createdAt: new Date().toISOString(),
+    });
+    addLog(`✅ 登録: 香福味坊 / ${rec.user} (徒歩${walkMin}分)`, 'ok');
+    await sleep(100);
+  }
+
+  for (const rec of KANDA_RECORDS) {
+    const walkMin = calcWalkMin(kandaPlace.lat, kandaPlace.lng);
+    await addDoc(collection(window._db, 'reviews'), {
+      placeId: kandaPlace.placeId, shopName: kandaPlace.name,
+      shopAddress: kandaPlace.address, lat: kandaPlace.lat, lng: kandaPlace.lng,
+      userName: rec.user, ratings: { taste: rec.taste, portion: rec.portion, price: rec.price, ambience: rec.ambience, speed: rec.speed },
+      walkMin, genres: ['中華料理'], menu: rec.menu, note: rec.note,
+      createdAt: new Date().toISOString(),
+    });
+    addLog(`✅ 登録: 神田味坊 / ${rec.user} (徒歩${walkMin}分)`, 'ok');
+    await sleep(100);
+  }
+
+  addLog('=== 完了！ ===', 'ok');
+};
+</script>
+
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBp-ufjhkc9R3Fls-tRoGlXMAAsWGCzuxU&libraries=places&callback=initMap&loading=async" async defer></script>
+</body>
+</html>

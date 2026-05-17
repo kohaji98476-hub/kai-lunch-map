@@ -457,7 +457,7 @@ function applyFilter() {
 }
 
 function clearFilter() {
-  filterGenres = [];
+  filterGenres.splice(0, filterGenres.length);
   document.getElementById('filter-modal').classList.remove('open');
   document.getElementById('filter-btn').classList.remove('active');
   loadAndShowMarkers();

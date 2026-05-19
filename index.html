@@ -737,7 +737,7 @@ function pixelToLatLng(x, y) {
     );
     return map.getProjection().fromPointToLatLng(worldPoint);
   } catch { return null; }
-
+}
 
 async function loadAndShowMarkers(forceReload = false) {
   if (!window._db) return;

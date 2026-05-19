@@ -132,8 +132,8 @@
   .rating-score-display { font-size: 13px; color: #173D8D; font-weight: 700; margin-bottom: 6px; }
   .half-stars { display: flex; gap: 2px; position: relative; }
   .star-wrap { position: relative; width: 32px; height: 32px; cursor: pointer; }
-  .star-wrap .star-bg { position: absolute; font-size: 28px; color: #ddd; user-select: none; }
-  .star-wrap .star-fill { position: absolute; font-size: 28px; color: #173D8D; overflow: hidden; width: 0%; user-select: none; transition: width 0.1s; }
+  .star-wrap .star-bg { position: absolute; font-size: 28px; color: #e0e0e0; user-select: none; }
+  .star-wrap .star-fill { position: absolute; font-size: 28px; color: #FFC107; overflow: hidden; width: 0%; user-select: none; transition: width 0.1s; }
 
   /* 徒歩時間 */
   .walk-item { margin-bottom: 20px; }
@@ -267,6 +267,25 @@
         <button class="primary-btn" onclick="applyFilter()">この条件で表示する</button>
         <button class="cancel-btn" onclick="clearFilter()">すべて表示する</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- 手動登録モーダル（長押し） -->
+<div class="modal-overlay" id="manual-modal">
+  <div class="modal">
+    <div class="modal-header-simple">
+      <div class="modal-handle"></div>
+      <h2>📍 お店を手動登録</h2>
+      <p>地図上でタップした場所にお店を登録します</p>
+    </div>
+    <div class="modal-body" style="margin-top:16px;">
+      <div class="name-input-wrap">
+        <label>店名</label>
+        <input id="manual-shop-name" type="text" placeholder="例：Garage666" />
+      </div>
+      <button class="primary-btn" onclick="confirmManualRegister()">この名前で登録へ進む</button>
+      <button class="cancel-btn" onclick="document.getElementById('manual-modal').classList.remove('open')">キャンセル</button>
     </div>
   </div>
 </div>
@@ -567,6 +586,30 @@ function selectSearchResult(name, lat, lng) {
   loadAndShowMarkers();
 }
 
+let manualLat = null, manualLng = null;
+
+function openManualRegisterModal(lat, lng) {
+  manualLat = lat;
+  manualLng = lng;
+  document.getElementById('manual-shop-name').value = '';
+  document.getElementById('manual-modal').classList.add('open');
+}
+
+function confirmManualRegister() {
+  const name = document.getElementById('manual-shop-name').value.trim();
+  if (!name) { showToast('店名を入力してください'); return; }
+  document.getElementById('manual-modal').classList.remove('open');
+
+  selectedPlace = {
+    placeId: 'manual_' + Date.now(),
+    name,
+    address: '',
+    lat: manualLat,
+    lng: manualLng,
+  };
+  openRegisterModal();
+}
+
 function clearSearch() {
   document.getElementById('search-input').value = '';
   document.getElementById('search-clear').style.display = 'none';
@@ -657,8 +700,44 @@ window.initMap = async function() {
     }
   });
   map.addListener('click', () => infoWindow.close());
+
+  // 長押しで任意の場所に登録
+  let longPressTimer = null;
+  const mapEl = document.getElementById('map');
+  mapEl.addEventListener('touchstart', (e) => {
+    longPressTimer = setTimeout(() => {
+      if (mode !== 'register') { showToast('登録モードに切り替えてください'); return; }
+      const touch = e.touches[0];
+      const latLng = pixelToLatLng(touch.clientX, touch.clientY);
+      if (latLng) openManualRegisterModal(latLng.lat, latLng.lng);
+    }, 700);
+  }, { passive: true });
+  mapEl.addEventListener('touchend', () => { clearTimeout(longPressTimer); }, { passive: true });
+  mapEl.addEventListener('touchmove', () => { clearTimeout(longPressTimer); }, { passive: true });
+
+  // PCでは右クリック
+  map.addListener('rightclick', (e) => {
+    if (mode !== 'register') { showToast('登録モードに切り替えてください'); return; }
+    openManualRegisterModal(e.latLng.lat(), e.latLng.lng());
+  });
+
   await loadAndShowMarkers();
 }
+
+function pixelToLatLng(x, y) {
+  try {
+    const topRight = map.getProjection().fromLatLngToPoint(map.getBounds().getNorthEast());
+    const bottomLeft = map.getProjection().fromLatLngToPoint(map.getBounds().getSouthWest());
+    const scale = Math.pow(2, map.getZoom());
+    const mapEl = document.getElementById('map');
+    const rect = mapEl.getBoundingClientRect();
+    const worldPoint = new google.maps.Point(
+      (x - rect.left) / scale + bottomLeft.x,
+      (y - rect.top) / scale + topRight.y
+    );
+    return map.getProjection().fromPointToLatLng(worldPoint);
+  } catch { return null; }
+
 
 async function loadAndShowMarkers(forceReload = false) {
   if (!window._db) return;
@@ -895,12 +974,12 @@ function openViewModal(placeId, data) {
     const fullStars = Math.floor(avg);
     const halfStar = (avg % 1) >= 0.5 ? 1 : 0;
     const emptyStars = 5 - fullStars - halfStar;
-    const starsHtml = '★'.repeat(fullStars) + (halfStar ? '½' : '') + '☆'.repeat(emptyStars);
+    const starsHtml = '★'.repeat(fullStars) + (halfStar ? '½' : '');
     avgSection.innerHTML += `
       <div class="avg-item">
         <span class="avg-label">${item.label}</span>
         <div class="avg-score">
-          <span style="color:#173D8D">${starsHtml}</span>
+          <span style="color:#FFC107">${starsHtml}</span>
           <span class="avg-num">${avg.toFixed(1)}<span style="font-size:11px;color:#aaa">/5</span></span>
         </div>
       </div>`;
@@ -920,7 +999,7 @@ function openViewModal(placeId, data) {
     : data.reviews.map(r => {
         const ratingRows = RATING_ITEMS.map(item => {
           const v = r.ratings?.[item.key] || 0;
-          return `<div class="user-review-item"><span>${item.label}</span><span style="color:#173D8D;font-weight:600">${v}<span style="font-size:10px;color:#aaa">/5</span></span></div>`;
+          return `<div class="user-review-item"><span>${item.label}</span><span style="color:#FFC107;font-weight:600">${v}<span style="font-size:10px;color:#aaa">/5</span></span></div>`;
         }).join('');
         const walkRow = `<div class="user-review-item"><span>🚶 徒歩時間</span><span>${r.walkMin ? `約${r.walkMin}分` : '-'}</span></div>`;
         const genres = '';
@@ -934,6 +1013,11 @@ function openViewModal(placeId, data) {
       }).join('');
 
   document.getElementById('view-modal').classList.add('open');
+  // 常に一番上から表示
+  setTimeout(() => {
+    const modal = document.querySelector('#view-modal .modal');
+    if (modal) modal.scrollTop = 0;
+  }, 10);
 }
 
 function closeViewModal() {

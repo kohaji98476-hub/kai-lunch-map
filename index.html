@@ -474,7 +474,6 @@ function onSearchInput() {
   const val = document.getElementById('search-input').value.trim();
   document.getElementById('search-clear').style.display = val ? 'block' : 'none';
 
-  // サジェスト表示
   const resultsEl = document.getElementById('search-results');
   if (!val) {
     resultsEl.style.display = 'none';
@@ -483,30 +482,79 @@ function onSearchInput() {
     return;
   }
 
-  // allReviewsから店名を絞り込んでサジェスト
+  // 登録済み店舗から候補を絞り込む
   const grouped = {};
   allReviews.forEach(r => {
-    if (!grouped[r.placeId]) grouped[r.placeId] = { name: r.shopName, address: r.shopAddress, lat: r.lat, lng: r.lng, genres: [] };
+    if (!grouped[r.placeId]) grouped[r.placeId] = { name: r.shopName, address: r.shopAddress, lat: r.lat, lng: r.lng, genres: [], registered: true };
     (r.genres || []).forEach(g => { if (!grouped[r.placeId].genres.includes(g)) grouped[r.placeId].genres.push(g); });
   });
-
   const q = val.toLowerCase();
-  const matches = Object.values(grouped).filter(d => d.name.toLowerCase().includes(q)).slice(0, 6);
+  const registered = Object.values(grouped).filter(d => d.name.toLowerCase().includes(q));
 
-  if (matches.length === 0) {
-    resultsEl.style.display = 'none';
-    searchQuery = val;
-    loadAndShowMarkers();
-    return;
-  }
+  // Places AutocompleteServiceで未登録店舗も検索
+  const autoSvc = new google.maps.places.AutocompleteService();
+  autoSvc.getPlacePredictions({
+    input: val,
+    locationBias: { center: { lat: 35.6969, lng: 139.7782 }, radius: 800 },
+    types: ['restaurant', 'food', 'cafe'],
+  }, (predictions, status) => {
+    const resultsEl = document.getElementById('search-results');
+    const unregistered = [];
 
-  resultsEl.innerHTML = matches.map(d => `
-    <div class="search-result-item" onclick="selectSearchResult('${d.name.replace(/'/g, "\\'")}', ${d.lat}, ${d.lng})">
-      <div class="search-result-name">${d.name}</div>
-      <div class="search-result-genre">${d.genres.join('・')}</div>
-      <div class="search-result-addr">${d.address || ''}</div>
-    </div>`).join('');
-  resultsEl.style.display = 'block';
+    if (status === google.maps.places.PlacesServiceStatus.OK && predictions) {
+      const registeredNames = new Set(registered.map(d => d.name));
+      predictions.forEach(p => {
+        if (!registeredNames.has(p.structured_formatting.main_text)) {
+          unregistered.push({
+            name: p.structured_formatting.main_text,
+            address: p.structured_formatting.secondary_text || '',
+            placeId: p.place_id,
+            registered: false,
+          });
+        }
+      });
+    }
+
+    const all = [
+      ...registered.slice(0, 4).map(d => ({...d, registered: true})),
+      ...unregistered.slice(0, 4),
+    ];
+
+    if (all.length === 0) {
+      resultsEl.style.display = 'none';
+      searchQuery = val;
+      loadAndShowMarkers();
+      return;
+    }
+
+    resultsEl.innerHTML = all.map(d => `
+      <div class="search-result-item" onclick="${d.registered
+        ? `selectSearchResult('${d.name.replace(/'/g, "\\'")}', ${d.lat}, ${d.lng})`
+        : `selectUnregisteredResult('${d.placeId}', '${d.name.replace(/'/g, "\\'")}')`
+      }">
+        <div class="search-result-name">${d.name} ${d.registered ? '<span style="font-size:10px;background:#173D8D;color:white;border-radius:6px;padding:1px 6px;">登録済み</span>' : ''}</div>
+        <div class="search-result-addr">${d.registered ? (d.genres.join('・') || '') : d.address}</div>
+      </div>`).join('');
+    resultsEl.style.display = 'block';
+  });
+}
+
+function selectUnregisteredResult(placeId, name) {
+  document.getElementById('search-input').value = name;
+  document.getElementById('search-results').style.display = 'none';
+  document.getElementById('search-clear').style.display = 'block';
+  searchQuery = '';
+
+  // 座標を取得して地図を移動
+  const mapDiv = document.getElementById('map');
+  const svc = new google.maps.places.PlacesService(map);
+  svc.getDetails({ placeId, fields: ['geometry', 'name'] }, (place, status) => {
+    if (status === google.maps.places.PlacesServiceStatus.OK) {
+      map.setCenter(place.geometry.location);
+      map.setZoom(18);
+    }
+  });
+  loadAndShowMarkers();
 }
 
 function selectSearchResult(name, lat, lng) {

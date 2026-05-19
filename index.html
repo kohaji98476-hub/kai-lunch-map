@@ -16,9 +16,10 @@
 
   #header {
     background: #173D8D; color: white; padding: 10px 16px;
-    display: flex; align-items: center; justify-content: space-between;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2); z-index: 100; flex-wrap: wrap; gap: 8px;
+    display: flex; flex-direction: column; gap: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2); z-index: 100;
   }
+  #header-top { display: flex; align-items: center; justify-content: space-between; }
   #header h1 { font-size: 18px; font-weight: 700; }
   #header-right { display: flex; align-items: center; gap: 8px; }
   #mode-toggle { display: flex; background: rgba(255,255,255,0.2); border-radius: 20px; padding: 3px; }
@@ -34,6 +35,31 @@
     font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
   }
   #filter-btn.active { background: white; color: #173D8D; border-color: white; }
+  #search-bar {
+    display: flex; align-items: center; background: rgba(255,255,255,0.15);
+    border-radius: 20px; padding: 6px 14px; gap: 8px;
+  }
+  #search-bar input {
+    background: transparent; border: none; outline: none; color: white;
+    font-size: 14px; width: 100%; placeholder-color: rgba(255,255,255,0.6);
+  }
+  #search-bar input::placeholder { color: rgba(255,255,255,0.6); }
+  #search-bar .search-icon { font-size: 14px; opacity: 0.7; }
+  #search-clear { background: none; border: none; color: rgba(255,255,255,0.7); cursor: pointer; font-size: 16px; display: none; padding: 0; }
+  #search-results {
+    display: none; position: absolute; top: 100%; left: 0; right: 0;
+    background: white; border-radius: 0 0 16px 16px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.15); z-index: 200; max-height: 300px; overflow-y: auto;
+  }
+  .search-result-item {
+    padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #f0f0f0;
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .search-result-item:last-child { border-bottom: none; }
+  .search-result-item:hover { background: #f5f5f5; }
+  .search-result-name { font-size: 14px; font-weight: 700; color: #333; }
+  .search-result-genre { font-size: 11px; color: #173D8D; }
+  .search-result-addr { font-size: 11px; color: #888; }
 
   #map { flex: 1; width: 100%; }
 
@@ -197,13 +223,23 @@
 <body>
 
 <div id="header">
-  <h1>🍱 KAI Lunch Map</h1>
-  <div id="header-right">
-    <button id="filter-btn" onclick="openFilterModal()">🏷️ 絞り込む</button>
-    <div id="mode-toggle">
-      <button class="mode-btn active" id="btn-view" onclick="setMode('view')">閲覧</button>
-      <button class="mode-btn" id="btn-register" onclick="setMode('register')">登録</button>
+  <div id="header-top">
+    <h1>🍱 KAI Lunch Map</h1>
+    <div id="header-right">
+      <button id="filter-btn" onclick="openFilterModal()">🏷️ 絞り込む</button>
+      <div id="mode-toggle">
+        <button class="mode-btn active" id="btn-view" onclick="setMode('view')">閲覧</button>
+        <button class="mode-btn" id="btn-register" onclick="setMode('register')">登録</button>
+      </div>
     </div>
+  </div>
+  <div style="position:relative;">
+    <div id="search-bar">
+      <span class="search-icon">🔍</span>
+      <input id="search-input" type="text" placeholder="お店を検索..." oninput="onSearchInput()" />
+      <button id="search-clear" onclick="clearSearch()">✕</button>
+    </div>
+    <div id="search-results"></div>
   </div>
 </div>
 
@@ -334,6 +370,8 @@ let map, mode = 'view', markers = [], selectedPlace = null;
 let ratings = {}, selectedGenres = [], filterGenres = [];
 let currentUserName = '', existingReviewId = null, allReviews = [];
 let infoWindow = null, currentLocationMarker = null;
+let reviewsLoaded = false; // キャッシュフラグ
+let searchQuery = ''; // 検索クエリ
 
 function calcDistance(lat1, lng1, lat2, lng2) {
   const R = 6371000;
@@ -432,6 +470,63 @@ function setMode(m) {
   }
 }
 
+function onSearchInput() {
+  const val = document.getElementById('search-input').value.trim();
+  document.getElementById('search-clear').style.display = val ? 'block' : 'none';
+
+  // サジェスト表示
+  const resultsEl = document.getElementById('search-results');
+  if (!val) {
+    resultsEl.style.display = 'none';
+    searchQuery = '';
+    loadAndShowMarkers();
+    return;
+  }
+
+  // allReviewsから店名を絞り込んでサジェスト
+  const grouped = {};
+  allReviews.forEach(r => {
+    if (!grouped[r.placeId]) grouped[r.placeId] = { name: r.shopName, address: r.shopAddress, lat: r.lat, lng: r.lng, genres: [] };
+    (r.genres || []).forEach(g => { if (!grouped[r.placeId].genres.includes(g)) grouped[r.placeId].genres.push(g); });
+  });
+
+  const q = val.toLowerCase();
+  const matches = Object.values(grouped).filter(d => d.name.toLowerCase().includes(q)).slice(0, 6);
+
+  if (matches.length === 0) {
+    resultsEl.style.display = 'none';
+    searchQuery = val;
+    loadAndShowMarkers();
+    return;
+  }
+
+  resultsEl.innerHTML = matches.map(d => `
+    <div class="search-result-item" onclick="selectSearchResult('${d.name.replace(/'/g, "\\'")}', ${d.lat}, ${d.lng})">
+      <div class="search-result-name">${d.name}</div>
+      <div class="search-result-genre">${d.genres.join('・')}</div>
+      <div class="search-result-addr">${d.address || ''}</div>
+    </div>`).join('');
+  resultsEl.style.display = 'block';
+}
+
+function selectSearchResult(name, lat, lng) {
+  document.getElementById('search-input').value = name;
+  document.getElementById('search-results').style.display = 'none';
+  document.getElementById('search-clear').style.display = 'block';
+  searchQuery = name;
+  map.setCenter({ lat, lng });
+  map.setZoom(18);
+  loadAndShowMarkers();
+}
+
+function clearSearch() {
+  document.getElementById('search-input').value = '';
+  document.getElementById('search-clear').style.display = 'none';
+  document.getElementById('search-results').style.display = 'none';
+  searchQuery = '';
+  loadAndShowMarkers();
+}
+
 function openFilterModal() {
   const container = document.getElementById('filter-genre-options');
   container.innerHTML = GENRES.map(g => `
@@ -517,11 +612,16 @@ window.initMap = async function() {
   await loadAndShowMarkers();
 }
 
-async function loadAndShowMarkers() {
+async function loadAndShowMarkers(forceReload = false) {
   if (!window._db) return;
-  const {collection, getDocs} = window._fbFns;
-  const snap = await getDocs(collection(window._db, 'reviews'));
-  allReviews = snap.docs.map(d => ({id: d.id, ...d.data()}));
+
+  // キャッシュ：初回またはforceReload時のみFirebaseから取得
+  if (!reviewsLoaded || forceReload) {
+    const {collection, getDocs} = window._fbFns;
+    const snap = await getDocs(collection(window._db, 'reviews'));
+    allReviews = snap.docs.map(d => ({id: d.id, ...d.data()}));
+    reviewsLoaded = true;
+  }
 
   const grouped = {};
   allReviews.forEach(r => {
@@ -538,6 +638,11 @@ async function loadAndShowMarkers() {
       const allGenres = data.reviews.flatMap(r => r.genres || []);
       const hasMatch = filterGenres.some(g => allGenres.includes(g));
       if (!hasMatch) continue;
+    }
+    // 検索フィルター適用
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      if (!data.name.toLowerCase().includes(q)) continue;
     }
     // 最後に登録したユーザーのジャンルを取得
     const sorted = [...data.reviews].sort((a,b) => (b.updatedAt||b.createdAt||'').localeCompare(a.updatedAt||a.createdAt||''));
@@ -676,7 +781,7 @@ async function deleteReview() {
   document.getElementById('btn-register').classList.remove('active');
   showToast('🗑️ 評価を削除しました');
   existingReviewId = null;
-  await loadAndShowMarkers();
+  await loadAndShowMarkers(true);
 }
 
 function closeRegisterModal() {
@@ -720,7 +825,7 @@ async function submitReview() {
   document.getElementById('btn-register').classList.remove('active');
   showToast(isEdit ? '✅ 修正しました！' : '✅ 登録しました！');
   existingReviewId = null;
-  await loadAndShowMarkers();
+  await loadAndShowMarkers(true);
 }
 
 function openViewModal(placeId, data) {

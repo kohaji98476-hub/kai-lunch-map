@@ -589,8 +589,8 @@ function selectSearchResult(name, lat, lng) {
 let manualLat = null, manualLng = null;
 
 function openManualRegisterModal(lat, lng) {
-  manualLat = lat;
-  manualLng = lng;
+  manualLat = typeof lat === 'function' ? lat() : lat;
+  manualLng = typeof lng === 'function' ? lng() : lng;
   document.getElementById('manual-shop-name').value = '';
   document.getElementById('manual-modal').classList.add('open');
 }
@@ -709,7 +709,7 @@ window.initMap = async function() {
       if (mode !== 'register') { showToast('登録モードに切り替えてください'); return; }
       const touch = e.touches[0];
       const latLng = pixelToLatLng(touch.clientX, touch.clientY);
-      if (latLng) openManualRegisterModal(latLng.lat, latLng.lng);
+      if (latLng) openManualRegisterModal(latLng.lat(), latLng.lng());
     }, 700);
   }, { passive: true });
   mapEl.addEventListener('touchend', () => { clearTimeout(longPressTimer); }, { passive: true });

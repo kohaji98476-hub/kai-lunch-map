@@ -925,34 +925,39 @@ async function submitReview() {
   const btn = document.getElementById('submit-btn');
   btn.disabled = true; btn.textContent = '保存中...';
 
-  const {collection, addDoc, doc, updateDoc} = window._fbFns;
-  const isEdit = !!existingReviewId;
+  try {
+    const {collection, addDoc, doc, updateDoc} = window._fbFns;
+    const isEdit = !!existingReviewId;
 
-  if (isEdit) {
-    await updateDoc(doc(window._db, 'reviews', existingReviewId), {
-      ratings, walkMin, genres: selectedGenres, menu, note,
-      updatedAt: new Date().toISOString()
-    });
-  } else {
-    await addDoc(collection(window._db, 'reviews'), {
-      placeId: selectedPlace.placeId, shopName: selectedPlace.name,
-      shopAddress: selectedPlace.address, lat: selectedPlace.lat, lng: selectedPlace.lng,
-      userName: currentUserName, ratings, walkMin,
-      genres: selectedGenres, menu, note,
-      createdAt: new Date().toISOString()
-    });
+    if (isEdit) {
+      await updateDoc(doc(window._db, 'reviews', existingReviewId), {
+        ratings, walkMin, genres: selectedGenres, menu, note,
+        updatedAt: new Date().toISOString()
+      });
+    } else {
+      await addDoc(collection(window._db, 'reviews'), {
+        placeId: selectedPlace.placeId, shopName: selectedPlace.name,
+        shopAddress: selectedPlace.address, lat: selectedPlace.lat, lng: selectedPlace.lng,
+        userName: currentUserName, ratings, walkMin,
+        genres: selectedGenres, menu, note,
+        createdAt: new Date().toISOString()
+      });
+    }
+
+    document.getElementById('register-modal').classList.remove('open');
+    document.getElementById('register-hint').classList.remove('show');
+    document.getElementById('user-badge').classList.remove('show');
+    mode = 'view';
+    document.getElementById('btn-view').classList.add('active');
+    document.getElementById('btn-register').classList.remove('active');
+    showToast(isEdit ? '✅ 修正しました！' : '✅ 登録しました！');
+    existingReviewId = null;
+    await loadAndShowMarkers(true);
+  } catch(e) {
+    showToast('❌ エラーが発生しました: ' + e.message);
+    btn.disabled = false;
+    btn.textContent = '登録する';
   }
-
-  btn.disabled = false;
-  document.getElementById('register-modal').classList.remove('open');
-  document.getElementById('register-hint').classList.remove('show');
-  document.getElementById('user-badge').classList.remove('show');
-  mode = 'view';
-  document.getElementById('btn-view').classList.add('active');
-  document.getElementById('btn-register').classList.remove('active');
-  showToast(isEdit ? '✅ 修正しました！' : '✅ 登録しました！');
-  existingReviewId = null;
-  await loadAndShowMarkers(true);
 }
 
 function openViewModal(placeId, data) {

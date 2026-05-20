@@ -888,7 +888,9 @@ function openRegisterModal() {
   document.getElementById('reg-shop-name').textContent = selectedPlace.name;
   document.getElementById('reg-shop-address').textContent = selectedPlace.address;
   document.getElementById('edit-badge-wrap').innerHTML = existing ? `<span class="edit-badge">✏️ 過去の評価を修正中</span>` : '';
-  document.getElementById('submit-btn').textContent = existing ? '修正を保存する' : '登録する';
+  const submitBtn = document.getElementById('submit-btn');
+  submitBtn.textContent = existing ? '修正を保存する' : '登録する';
+  submitBtn.disabled = false;
   document.getElementById('delete-btn').style.display = existing ? 'block' : 'none';
   document.getElementById('register-modal').classList.add('open');
 }

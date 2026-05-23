@@ -782,14 +782,14 @@ const RANKING_ITEMS = [
 ];
 
 function openRankingStep1() {
-  rankingGenres = ['ALL']; rankingItems = []; rankingUsers = ['ALL'];
+  // 履歴を保持するためリセットしない（初回のみ初期値）
 
   const container = document.getElementById('ranking-genre-options');
   container.innerHTML = '';
 
   // 全ジャンル選択肢
   const allChip = document.createElement('div');
-  allChip.className = 'genre-chip selected';
+  allChip.className = 'genre-chip' + (rankingGenres.includes('ALL') ? ' selected' : '');
   allChip.dataset.val = 'ALL';
   allChip.textContent = '🌐 全てのジャンル';
   allChip.onclick = () => toggleRankingChip('ranking-genre-options', 'ALL', rankingGenres, true);
@@ -797,7 +797,7 @@ function openRankingStep1() {
 
   GENRES.forEach(g => {
     const chip = document.createElement('div');
-    chip.className = 'genre-chip';
+    chip.className = 'genre-chip' + (rankingGenres.includes(g) ? ' selected' : '');
     chip.dataset.val = g;
     chip.textContent = g;
     chip.onclick = () => toggleRankingChip('ranking-genre-options', g, rankingGenres, true);
@@ -813,16 +813,19 @@ function openRankingStep2() {
 
   const container = document.getElementById('ranking-item-options');
   container.innerHTML = '';
-  rankingItems = [];
 
   RANKING_ITEMS.forEach(item => {
     const chip = document.createElement('div');
-    chip.className = 'genre-chip';
+    chip.className = 'genre-chip' + (rankingItems.includes(item.key) ? ' selected' : '');
     chip.dataset.val = item.key;
     chip.textContent = item.label;
     chip.onclick = () => toggleRankingChip('ranking-item-options', item.key, rankingItems, false);
     container.appendChild(chip);
   });
+
+  // 徒歩時間の前回値を復元
+  document.getElementById('ranking-walk-min').value = rankingWalkMin;
+  document.getElementById('ranking-walk-max').value = rankingWalkMax;
 
   document.getElementById('ranking-modal-2').classList.add('open');
 }
@@ -831,14 +834,12 @@ function openRankingStep3() {
   if (rankingItems.length === 0) { showToast('評価項目を選択してください'); return; }
   document.getElementById('ranking-modal-2').classList.remove('open');
 
-  // ユーザー一覧を動的生成
   const users = [...new Set(allReviews.map(r => r.userName).filter(Boolean))].sort();
   const container = document.getElementById('ranking-user-options');
   container.innerHTML = '';
-  rankingUsers = ['ALL'];
 
   const allChip = document.createElement('div');
-  allChip.className = 'genre-chip selected';
+  allChip.className = 'genre-chip' + (rankingUsers.includes('ALL') ? ' selected' : '');
   allChip.dataset.val = 'ALL';
   allChip.textContent = '👥 全てのユーザー';
   allChip.onclick = () => toggleRankingChip('ranking-user-options', 'ALL', rankingUsers, true);
@@ -846,7 +847,7 @@ function openRankingStep3() {
 
   users.forEach(u => {
     const chip = document.createElement('div');
-    chip.className = 'genre-chip';
+    chip.className = 'genre-chip' + (rankingUsers.includes(u) ? ' selected' : '');
     chip.dataset.val = u;
     chip.textContent = '👤 ' + u;
     chip.onclick = () => toggleRankingChip('ranking-user-options', u, rankingUsers, true);
@@ -916,7 +917,7 @@ function showRanking() {
   // お店ごとにグループ化して平均を計算
   const grouped = {};
   reviews.forEach(r => {
-    if (!grouped[r.placeId]) grouped[r.placeId] = { name: r.shopName, reviews: [] };
+    if (!grouped[r.placeId]) grouped[r.placeId] = { name: r.shopName, lat: r.lat, lng: r.lng, reviews: [] };
     grouped[r.placeId].reviews.push(r);
   });
 
@@ -932,7 +933,7 @@ function showRanking() {
       if (itemCount > 0) { totalScore += itemSum / itemCount; count++; }
     });
     const avg = count > 0 ? totalScore / count : 0;
-    return { name: shop.name, avg, reviewCount: count };
+    return { name: shop.name, lat: shop.lat, lng: shop.lng, avg, reviewCount: count };
   }).filter(s => s.avg > 0).sort((a, b) => b.avg - a.avg);
 
   // 結果表示
@@ -952,11 +953,11 @@ function showRanking() {
       const numClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
       const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1) + '位';
       return `
-        <div class="ranking-item">
+        <div class="ranking-item" style="cursor:pointer;" onclick="goToShopFromRanking(${shop.lat}, ${shop.lng})">
           <div class="ranking-num ${numClass}">${medal}</div>
           <div class="ranking-info">
             <div class="ranking-shop">${shop.name}</div>
-            <div style="font-size:11px;color:#888;">${shop.reviewCount}件の評価</div>
+            <div style="font-size:11px;color:#888;">${shop.reviewCount}件の評価 　🗺️ タップで地図へ</div>
           </div>
           <div class="ranking-score">${shop.avg.toFixed(2)}</div>
         </div>`;
@@ -970,6 +971,12 @@ function showRanking() {
   }, 10);
 }
 
+function goToShopFromRanking(lat, lng) {
+  closeRankingModals();
+  map.setCenter({ lat, lng });
+  map.setZoom(18);
+}
+
 function closeRankingModals() {
   ['ranking-modal-1','ranking-modal-2','ranking-modal-3','ranking-result-modal'].forEach(id => {
     document.getElementById(id).classList.remove('open');
@@ -978,7 +985,11 @@ function closeRankingModals() {
 
 function openFilterModal() {
   const container = document.getElementById('filter-genre-options');
-  container.innerHTML = GENRES.map(g => `
+  const allSelected = filterGenres.length === 0;
+  container.innerHTML = `
+    <div class="genre-chip${allSelected ? ' selected' : ''}"
+         data-genre="ALL" onclick="toggleFilterGenre('ALL')">🌐 全てのジャンル</div>
+  ` + GENRES.map(g => `
     <div class="genre-chip${filterGenres.includes(g) ? ' selected' : ''}"
          data-genre="${g}" onclick="toggleFilterGenre('${g}')">${g}</div>
   `).join('');
@@ -989,11 +1000,19 @@ function openFilterModal() {
 }
 
 function toggleFilterGenre(genre) {
-  const idx = filterGenres.indexOf(genre);
-  if (idx >= 0) filterGenres.splice(idx, 1);
-  else filterGenres.push(genre);
+  if (genre === 'ALL') {
+    filterGenres.splice(0, filterGenres.length);
+  } else {
+    const idx = filterGenres.indexOf(genre);
+    if (idx >= 0) filterGenres.splice(idx, 1);
+    else filterGenres.push(genre);
+  }
   document.querySelectorAll('#filter-genre-options .genre-chip').forEach(chip => {
-    chip.classList.toggle('selected', filterGenres.includes(chip.dataset.genre));
+    if (chip.dataset.genre === 'ALL') {
+      chip.classList.toggle('selected', filterGenres.length === 0);
+    } else {
+      chip.classList.toggle('selected', filterGenres.includes(chip.dataset.genre));
+    }
   });
 }
 

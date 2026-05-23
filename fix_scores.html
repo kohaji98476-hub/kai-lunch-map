@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>スコア修正ツール</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: sans-serif; background: #f5f5f5; padding: 20px; }
+  .card { background: white; border-radius: 16px; padding: 24px; max-width: 640px; margin: 0 auto; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+  h2 { color: #173D8D; margin-bottom: 8px; }
+  p { color: #666; font-size: 13px; margin-bottom: 16px; line-height: 1.6; }
+  button { padding: 12px 24px; background: #173D8D; color: white; border: none; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; }
+  button:disabled { background: #ccc; cursor: not-allowed; }
+  .progress-bar { background: #eee; border-radius: 10px; height: 12px; margin: 12px 0; }
+  .progress-fill { background: #173D8D; border-radius: 10px; height: 12px; width: 0%; transition: width 0.3s; }
+  #log { margin-top: 16px; max-height: 500px; overflow-y: auto; font-size: 12px; font-family: monospace; background: #f9f9f9; border-radius: 8px; padding: 12px; }
+  .ok { color: #4CAF50; } .err { color: #e53935; } .info { color: #173D8D; } .skip { color: #FF9800; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h2>🔧 スコア修正ツール</h2>
+  <p>
+    量・値段・雰囲気・混雑度のスコアが÷2されて登録されていたのを修正します。<br>
+    味（E列）はそのまま÷2、他（F〜I列）はそのままの値に更新します。
+  </p>
+  <button id="startBtn" onclick="startFix()">修正開始</button>
+  <div class="progress-bar"><div class="progress-fill" id="prog-bar"></div></div>
+  <div id="prog-text" style="font-size:13px;color:#666;margin-bottom:8px;">待機中...</div>
+  <div id="log"></div>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getFirestore, collection, getDocs, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  const app = initializeApp({
+    apiKey: "AIzaSyCHIxKeZr_iA_K9XSSgteZjez7TnZIk1CM",
+    authDomain: "kai-lunch-map-d16d0.firebaseapp.com",
+    projectId: "kai-lunch-map-d16d0",
+    storageBucket: "kai-lunch-map-d16d0.firebasestorage.app",
+    messagingSenderId: "107069095031",
+    appId: "1:107069095031:web:0a107a881ae79b63dcda72",
+  });
+  const db = getFirestore(app);
+  window._db = db;
+  window._fns = { collection, getDocs, doc, updateDoc };
+</script>
+
+<script>
+const CORRECT_RECORDS = [{"shop": "越後屋 平次", "user": "小林", "taste": 3.5, "portion": 4.0, "price": 6.0, "ambience": 4.0, "speed": 3.0}, {"shop": "越後屋 平次", "user": "月本", "taste": 3.5, "portion": 3.0, "price": 4.0, "ambience": 2.0, "speed": 4.0}, {"shop": "越後屋 平次", "user": "八代", "taste": 4.0, "portion": 5.0, "price": 4.0, "ambience": 2.0, "speed": 3.0}, {"shop": "越後屋 平次", "user": "川野", "taste": 3.0, "portion": 4.0, "price": 4.0, "ambience": 2.0, "speed": 3.0}, {"shop": "佐賀ふもと赤鶏 酒場 髙しな", "user": "小林", "taste": 4.0, "portion": 5.0, "price": 8.0, "ambience": 4.0, "speed": 3.0}, {"shop": "佐賀ふもと赤鶏 酒場 髙しな", "user": "月本", "taste": 4.0, "portion": 5.0, "price": 6.0, "ambience": 4.0, "speed": 3.0}, {"shop": "佐賀ふもと赤鶏 酒場 髙しな", "user": "八代", "taste": 4.5, "portion": 5.0, "price": 6.0, "ambience": 4.0, "speed": 3.0}, {"shop": "佐賀ふもと赤鶏 酒場 髙しな", "user": "川野", "taste": 4.0, "portion": 5.0, "price": 7.0, "ambience": 3.0, "speed": 4.0}, {"shop": "蕎麦処 陸人", "user": "小林", "taste": 3.5, "portion": 5.0, "price": 8.0, "ambience": 4.0, "speed": 4.0}, {"shop": "蕎麦処 陸人", "user": "月本", "taste": 4.0, "portion": 5.0, "price": 7.0, "ambience": 4.0, "speed": 3.0}, {"shop": "蕎麦処 陸人", "user": "八代", "taste": 5.0, "portion": 5.0, "price": 8.0, "ambience": 5.0, "speed": 3.0}, {"shop": "蕎麦処 陸人", "user": "川野", "taste": 4.5, "portion": 5.0, "price": 6.0, "ambience": 4.0, "speed": 3.0}, {"shop": "ずく箱（2025.6末閉店）", "user": "月本", "taste": 3.5, "portion": 5.0, "price": 8.0, "ambience": 5.0, "speed": 3.0}, {"shop": "ずく箱（2025.6末閉店）", "user": "八代", "taste": 3.5, "portion": 5.0, "price": 8.0, "ambience": 5.0, "speed": 3.0}, {"shop": "中華居酒屋 貴族", "user": "月本", "taste": 2.5, "portion": 4.0, "price": 9.0, "ambience": 3.0, "speed": 4.0}, {"shop": "中華居酒屋 貴族", "user": "八代", "taste": 3.5, "portion": 5.0, "price": 9.0, "ambience": 2.0, "speed": 3.0}, {"shop": "中華居酒屋 貴族", "user": "川野", "taste": 3.0, "portion": 4.0, "price": 9.0, "ambience": 3.0, "speed": 4.0}, {"shop": "雲林房", "user": "月本", "taste": 4.0, "portion": 4.0, "price": 6.0, "ambience": 4.0, "speed": 3.0}, {"shop": "雲林房", "user": "八代", "taste": 4.5, "portion": 5.0, "price": 6.0, "ambience": 4.0, "speed": 3.0}, {"shop": "ミートガーデン", "user": "小林", "taste": 4.0, "portion": 5.0, "price": 9.0, "ambience": 4.0, "speed": 4.0}, {"shop": "ミートガーデン", "user": "月本", "taste": 3.0, "portion": 5.0, "price": 7.0, "ambience": 4.0, "speed": 5.0}, {"shop": "ミートガーデン", "user": "八代", "taste": 4.0, "portion": 5.0, "price": 8.0, "ambience": 4.0, "speed": 5.0}, {"shop": "ミートガーデン", "user": "川野", "taste": 3.0, "portion": 3.0, "price": 8.0, "ambience": 3.0, "speed": 4.0}, {"shop": "コスモ厨房", "user": "月本", "taste": 5.0, "portion": 3.0, "price": 6.0, "ambience": 5.0, "speed": 5.0}, {"shop": "コスモ厨房", "user": "八代", "taste": 5.0, "portion": 4.0, "price": 6.0, "ambience": 5.0, "speed": 4.0}, {"shop": "コスモ厨房", "user": "川野", "taste": 5.0, "portion": 3.0, "price": 5.0, "ambience": 4.0, "speed": 5.0}, {"shop": "香福味坊", "user": "月本", "taste": 3.5, "portion": 5.0, "price": 7.0, "ambience": 4.0, "speed": 3.0}, {"shop": "香福味坊", "user": "八代", "taste": 3.5, "portion": 5.0, "price": 7.0, "ambience": 4.0, "speed": 3.0}, {"shop": "香福味坊", "user": "川野", "taste": 3.0, "portion": 3.0, "price": 8.0, "ambience": 3.0, "speed": 3.0}, {"shop": "いわし料理 大松", "user": "月本", "taste": 3.5, "portion": 4.0, "price": 8.0, "ambience": 3.0, "speed": 4.0}, {"shop": "いわし料理 大松", "user": "八代", "taste": 3.0, "portion": 4.0, "price": 8.0, "ambience": 3.0, "speed": 4.0}, {"shop": "いわし料理 大松", "user": "川野", "taste": 3.0, "portion": 3.0, "price": 6.0, "ambience": 3.0, "speed": 2.0}, {"shop": "バンコック ポニー食堂", "user": "月本", "taste": 4.0, "portion": 5.0, "price": 7.0, "ambience": 5.0, "speed": 2.0}, {"shop": "バンコック ポニー食堂", "user": "八代", "taste": 4.5, "portion": 5.0, "price": 7.0, "ambience": 4.0, "speed": 3.0}, {"shop": "バンコック ポニー食堂", "user": "川野", "taste": 4.5, "portion": 5.0, "price": 7.0, "ambience": 5.0, "speed": 2.0}, {"shop": "湘悦", "user": "月本", "taste": 2.5, "portion": 5.0, "price": 8.0, "ambience": 4.0, "speed": 3.0}, {"shop": "湘悦", "user": "八代", "taste": 2.0, "portion": 5.0, "price": 8.0, "ambience": 3.0, "speed": 3.0}, {"shop": "Komi'z", "user": "小林", "taste": 3.5, "portion": 3.0, "price": 7.0, "ambience": 4.0, "speed": 4.0}, {"shop": "Komi'z", "user": "月本", "taste": 3.5, "portion": 5.0, "price": 9.0, "ambience": 3.0, "speed": 4.0}, {"shop": "Komi'z", "user": "八代", "taste": 3.5, "portion": 5.0, "price": 10.0, "ambience": 3.0, "speed": 3.0}, {"shop": "Komi'z", "user": "川野", "taste": 4.0, "portion": 4.0, "price": 10.0, "ambience": 3.0, "speed": 4.0}, {"shop": "和合餃子", "user": "月本", "taste": 4.0, "portion": 5.0, "price": 8.0, "ambience": 3.0, "speed": 4.0}, {"shop": "和合餃子", "user": "八代", "taste": 4.5, "portion": 5.0, "price": 8.0, "ambience": 3.0, "speed": 4.0}, {"shop": "和合餃子", "user": "川野", "taste": 5.0, "portion": 5.0, "price": 8.0, "ambience": 3.0, "speed": 4.0}, {"shop": "スペイン食堂 エルペケーニャ", "user": "月本", "taste": 4.5, "portion": 4.0, "price": 5.0, "ambience": 5.0, "speed": 4.0}, {"shop": "スペイン食堂 エルペケーニャ", "user": "川野", "taste": 4.5, "portion": 4.0, "price": 1.0, "ambience": 5.0, "speed": 4.0}, {"shop": "神田 味坊", "user": "月本", "taste": 4.5, "portion": 5.0, "price": 7.0, "ambience": 4.0, "speed": 5.0}, {"shop": "神田 味坊", "user": "八代", "taste": 4.5, "portion": 5.0, "price": 8.0, "ambience": 3.0, "speed": 5.0}, {"shop": "神田 味坊", "user": "山小瀬", "taste": 3.0, "portion": 5.0, "price": 6.0, "ambience": 4.0, "speed": 5.0}, {"shop": "かぐらや", "user": "月本", "taste": 3.5, "portion": 3.0, "price": 7.0, "ambience": 4.0, "speed": 5.0}, {"shop": "かぐらや", "user": "八代", "taste": 3.5, "portion": 5.0, "price": 7.0, "ambience": 3.0, "speed": 5.0}, {"shop": "一心", "user": "月本", "taste": 3.5, "portion": 5.0, "price": 8.0, "ambience": 3.0, "speed": 3.0}, {"shop": "一心", "user": "八代", "taste": 3.0, "portion": 4.0, "price": 9.0, "ambience": 3.0, "speed": 3.0}, {"shop": "一心", "user": "山小瀬", "taste": 4.5, "portion": 5.0, "price": 8.0, "ambience": 4.0, "speed": 3.0}, {"shop": "岩本町漁港 快海", "user": "月本", "taste": 5.0, "portion": 5.0, "price": 6.0, "ambience": 5.0, "speed": 3.0}, {"shop": "岩本町漁港 快海", "user": "八代", "taste": 5.0, "portion": 5.0, "price": 6.0, "ambience": 5.0, "speed": 3.0}, {"shop": "岩本町漁港 快海", "user": "山小瀬", "taste": 5.0, "portion": 5.0, "price": 5.0, "ambience": 5.0, "speed": 4.0}, {"shop": "岩本町漁港 快海", "user": "臼田", "taste": 4.5, "portion": 5.0, "price": 6.0, "ambience": 5.0, "speed": 3.0}, {"shop": "沖縄料理と炉端焼き なんくるないさー", "user": "月本", "taste": 2.5, "portion": 5.0, "price": 6.0, "ambience": 3.0, "speed": 5.0}, {"shop": "沖縄料理と炉端焼き なんくるないさー", "user": "八代", "taste": 3.0, "portion": 5.0, "price": 6.0, "ambience": 4.0, "speed": 5.0}, {"shop": "沖縄料理と炉端焼き なんくるないさー", "user": "山小瀬", "taste": 3.5, "portion": 3.0, "price": 3.0, "ambience": 3.0, "speed": 5.0}, {"shop": "ジュークステーキ", "user": "月本", "taste": 3.5, "portion": 5.0, "price": 5.0, "ambience": 4.0, "speed": 3.0}, {"shop": "ジュークステーキ", "user": "八代", "taste": 3.5, "portion": 5.0, "price": 5.0, "ambience": 4.0, "speed": 2.0}, {"shop": "ジュークステーキ", "user": "山小瀬", "taste": 2.5, "portion": 5.0, "price": 4.0, "ambience": 3.0, "speed": 3.0}, {"shop": "ジュークステーキ", "user": "臼田", "taste": 3.5, "portion": 4.0, "price": 6.0, "ambience": 4.0, "speed": 3.0}, {"shop": "煉", "user": "月本", "taste": 4.0, "portion": 4.0, "price": 7.0, "ambience": 5.0, "speed": 2.0}, {"shop": "煉", "user": "八代", "taste": 4.0, "portion": 5.0, "price": 7.0, "ambience": 5.0, "speed": 3.0}, {"shop": "煉", "user": "臼田", "taste": 3.5, "portion": 3.0, "price": 7.0, "ambience": 4.0, "speed": 3.0}, {"shop": "すゞ太郎", "user": "月本", "taste": 4.0, "portion": 2.0, "price": 7.0, "ambience": 4.0, "speed": 5.0}, {"shop": "すゞ太郎", "user": "八代", "taste": 4.0, "portion": 2.0, "price": 5.0, "ambience": 4.0, "speed": 5.0}, {"shop": "すゞ太郎", "user": "山小瀬", "taste": 4.0, "portion": 2.0, "price": 7.0, "ambience": 3.0, "speed": 5.0}, {"shop": "すゞ太郎", "user": "臼田", "taste": 4.5, "portion": 2.0, "price": 6.0, "ambience": 4.0, "speed": 5.0}, {"shop": "魚金", "user": "月本", "taste": 4.0, "portion": 5.0, "price": 5.0, "ambience": 4.0, "speed": 5.0}, {"shop": "魚金", "user": "八代", "taste": 3.5, "portion": 5.0, "price": 7.0, "ambience": 4.0, "speed": 5.0}, {"shop": "魚金", "user": "山小瀬", "taste": 4.0, "portion": 5.0, "price": 6.0, "ambience": 3.0, "speed": 3.0}, {"shop": "魚金", "user": "臼田", "taste": 4.0, "portion": 4.0, "price": 6.0, "ambience": 4.0, "speed": 5.0}, {"shop": "杉のあかり", "user": "月本", "taste": 4.0, "portion": 5.0, "price": 7.0, "ambience": 5.0, "speed": 2.0}, {"shop": "杉のあかり", "user": "八代", "taste": 4.5, "portion": 5.0, "price": 7.0, "ambience": 5.0, "speed": 2.0}, {"shop": "杉のあかり", "user": "山小瀬", "taste": 4.5, "portion": 5.0, "price": 5.0, "ambience": 4.0, "speed": 5.0}, {"shop": "釜あげスパゲッティ すぱじろう", "user": "月本", "taste": 3.5, "portion": 5.0, "price": 6.0, "ambience": 5.0, "speed": 3.0}, {"shop": "釜あげスパゲッティ すぱじろう", "user": "八代", "taste": 3.5, "portion": 5.0, "price": 6.0, "ambience": 5.0, "speed": 3.0}, {"shop": "釜あげスパゲッティ すぱじろう", "user": "山小瀬", "taste": 2.5, "portion": 5.0, "price": 8.0, "ambience": 3.0, "speed": 3.0}, {"shop": "釜あげスパゲッティ すぱじろう", "user": "臼田", "taste": 3.5, "portion": 5.0, "price": 5.0, "ambience": 5.0, "speed": 3.0}, {"shop": "ハンバーグの店 ベア", "user": "月本", "taste": 4.0, "portion": 5.0, "price": 9.0, "ambience": 5.0, "speed": 3.0}, {"shop": "ハンバーグの店 ベア", "user": "山小瀬", "taste": 2.5, "portion": 2.0, "price": 7.0, "ambience": 2.0, "speed": 3.0}, {"shop": "ハンバーグの店 ベア", "user": "臼田", "taste": 3.5, "portion": 4.0, "price": 9.0, "ambience": 5.0, "speed": 3.0}, {"shop": "中華料理店 食福", "user": "八代", "taste": 4.0, "portion": 5.0, "price": 9.0, "ambience": 3.0, "speed": 4.0}, {"shop": "とんかつ藤芳", "user": "月本", "taste": 4.5, "portion": 5.0, "price": 6.0, "ambience": 4.0, "speed": 3.0}, {"shop": "とんかつ藤芳", "user": "八代", "taste": 4.0, "portion": 5.0, "price": 6.0, "ambience": 4.0, "speed": 3.0}, {"shop": "とんかつ藤芳", "user": "山小瀬", "taste": 3.5, "portion": 5.0, "price": 5.0, "ambience": 3.0, "speed": 3.0}, {"shop": "とんかつ藤芳", "user": "臼田", "taste": 4.5, "portion": 4.0, "price": 6.0, "ambience": 4.0, "speed": 3.0}, {"shop": "麺ZINさいとう", "user": "月本", "taste": 4.0, "portion": 5.0, "price": 5.0, "ambience": 3.0, "speed": 4.0}, {"shop": "麺ZINさいとう", "user": "八代", "taste": 4.0, "portion": 5.0, "price": 5.0, "ambience": 3.0, "speed": 3.0}, {"shop": "ロティタイム", "user": "月本", "taste": 3.5, "portion": 5.0, "price": 7.0, "ambience": 4.0, "speed": 4.0}, {"shop": "ロティタイム", "user": "八代", "taste": 3.5, "portion": 5.0, "price": 7.0, "ambience": 4.0, "speed": 4.0}, {"shop": "麹蔵", "user": "月本", "taste": 4.0, "portion": 5.0, "price": 8.0, "ambience": 5.0, "speed": 5.0}, {"shop": "麹蔵", "user": "八代", "taste": 4.0, "portion": 5.0, "price": 7.0, "ambience": 5.0, "speed": 4.0}, {"shop": "麹蔵", "user": "山小瀬", "taste": 4.0, "portion": 5.0, "price": 7.0, "ambience": 5.0, "speed": 4.0}, {"shop": "麹蔵", "user": "臼田", "taste": 4.0, "portion": 4.0, "price": 7.0, "ambience": 5.0, "speed": 4.0}, {"shop": "陳家私菜", "user": "月本", "taste": 4.0, "portion": 5.0, "price": 7.0, "ambience": 3.0, "speed": 3.0}, {"shop": "陳家私菜", "user": "八代", "taste": 4.0, "portion": 5.0, "price": 7.0, "ambience": 4.0, "speed": 2.0}, {"shop": "陳家私菜", "user": "山小瀬", "taste": 5.0, "portion": 5.0, "price": 7.0, "ambience": 5.0, "speed": 4.0}, {"shop": "陳家私菜", "user": "臼田", "taste": 5.0, "portion": 5.0, "price": 9.0, "ambience": 3.0, "speed": 3.0}, {"shop": "胡椒饅頭PAOPAO", "user": "月本", "taste": 4.0, "portion": 5.0, "price": 6.0, "ambience": 5.0, "speed": 3.0}, {"shop": "胡椒饅頭PAOPAO", "user": "八代", "taste": 4.0, "portion": 5.0, "price": 6.0, "ambience": 5.0, "speed": 4.0}, {"shop": "胡椒饅頭PAOPAO", "user": "山小瀬", "taste": 4.0, "portion": 3.0, "price": 4.0, "ambience": 4.0, "speed": 3.0}, {"shop": "サバイサバイタイ屋台", "user": "月本", "taste": 3.5, "portion": 5.0, "price": 8.0, "ambience": 4.0, "speed": 3.0}, {"shop": "サバイサバイタイ屋台", "user": "八代", "taste": 3.5, "portion": 5.0, "price": 8.0, "ambience": 5.0, "speed": 3.0}, {"shop": "サバイサバイタイ屋台", "user": "山小瀬", "taste": 2.5, "portion": 3.0, "price": 5.0, "ambience": 3.0, "speed": 3.0}, {"shop": "たつみ屋", "user": "月本", "taste": 3.5, "portion": 5.0, "price": 6.0, "ambience": 4.0, "speed": 5.0}, {"shop": "居酒屋革命　酔っ手羽", "user": "月本", "taste": 3.0, "portion": 5.0, "price": 7.0, "ambience": 3.0, "speed": 5.0}, {"shop": "居酒屋革命　酔っ手羽", "user": "八代", "taste": 3.0, "portion": 5.0, "price": 7.0, "ambience": 3.0, "speed": 4.0}, {"shop": "肉蕎麦 五六八", "user": "小林", "taste": 4.0, "portion": 5.0, "price": 8.0, "ambience": 3.0, "speed": 4.0}, {"shop": "肉蕎麦 五六八", "user": "月本", "taste": 4.0, "portion": 5.0, "price": 6.0, "ambience": 4.0, "speed": 4.0}, {"shop": "肉蕎麦 五六八", "user": "八代", "taste": 3.5, "portion": 5.0, "price": 6.0, "ambience": 3.0, "speed": 4.0}, {"shop": "肉蕎麦 五六八", "user": "臼田", "taste": 4.0, "portion": 5.0, "price": 6.0, "ambience": 3.0, "speed": 4.0}, {"shop": "無銘", "user": "月本", "taste": 4.0, "portion": 5.0, "price": 8.0, "ambience": 3.0, "speed": 4.0}, {"shop": "無銘", "user": "八代", "taste": 4.0, "portion": 5.0, "price": 7.0, "ambience": 4.0, "speed": 4.0}, {"shop": "無銘", "user": "山小瀬", "taste": 5.0, "portion": 5.0, "price": 7.0, "ambience": 3.0, "speed": 2.0}, {"shop": "町役場", "user": "月本", "taste": 3.0, "portion": 5.0, "price": 8.0, "ambience": 3.0, "speed": 5.0}, {"shop": "町役場", "user": "山小瀬", "taste": 2.5, "portion": 5.0, "price": 7.0, "ambience": 3.0, "speed": 3.0}, {"shop": "町役場", "user": "臼田", "taste": 3.0, "portion": 4.0, "price": 8.0, "ambience": 3.0, "speed": 4.0}, {"shop": "小料理屋すなお", "user": "月本", "taste": 4.5, "portion": 4.0, "price": 7.0, "ambience": 5.0, "speed": 3.0}, {"shop": "小料理屋すなお", "user": "臼田", "taste": 4.5, "portion": 4.0, "price": 6.0, "ambience": 5.0, "speed": 3.0}, {"shop": "鬼金棒Lab", "user": "月本", "taste": 4.0, "portion": 3.0, "price": 3.0, "ambience": 4.0, "speed": 5.0}, {"shop": "鬼金棒Lab", "user": "八代", "taste": 5.0, "portion": 5.0, "price": 1.0, "ambience": 5.0, "speed": 5.0}, {"shop": "鬼金棒Lab", "user": "臼田", "taste": 4.0, "portion": 4.0, "price": 2.0, "ambience": 4.0, "speed": 4.0}, {"shop": "ポアル館", "user": "月本", "taste": 4.0, "portion": 5.0, "price": 8.0, "ambience": 5.0, "speed": 4.0}, {"shop": "ポアル館", "user": "山小瀬", "taste": 4.0, "portion": 5.0, "price": 8.0, "ambience": 3.0, "speed": 3.0}, {"shop": "ポアル館", "user": "臼田", "taste": 4.0, "portion": 4.0, "price": 8.0, "ambience": 4.0, "speed": 3.0}, {"shop": "讃岐うどん 豐香", "user": "月本", "taste": 3.5, "portion": 3.0, "price": 6.0, "ambience": 3.0, "speed": 3.0}, {"shop": "讃岐うどん 豐香", "user": "山小瀬", "taste": 3.5, "portion": 4.0, "price": 5.0, "ambience": 3.0, "speed": 1.0}, {"shop": "讃岐うどん 豐香", "user": "臼田", "taste": 4.5, "portion": 4.0, "price": 5.0, "ambience": 4.0, "speed": 3.0}, {"shop": "蓬渓閣", "user": "月本", "taste": 3.0, "portion": 5.0, "price": 9.0, "ambience": 3.0, "speed": 4.0}, {"shop": "洋食工房 ジェンコ", "user": "月本", "taste": 4.5, "portion": 3.0, "price": 7.0, "ambience": 5.0, "speed": 3.0}, {"shop": "洋食工房 ジェンコ", "user": "山小瀬", "taste": 5.0, "portion": 5.0, "price": 7.0, "ambience": 3.0, "speed": 2.0}, {"shop": "洋食工房 ジェンコ", "user": "臼田", "taste": 4.5, "portion": 3.0, "price": 7.0, "ambience": 5.0, "speed": 3.0}, {"shop": "すりみや", "user": "月本", "taste": 3.5, "portion": 5.0, "price": 8.0, "ambience": 4.0, "speed": 4.0}, {"shop": "すりみや", "user": "山小瀬", "taste": 3.5, "portion": 5.0, "price": 5.0, "ambience": 4.0, "speed": 4.0}, {"shop": "すりみや", "user": "臼田", "taste": 4.0, "portion": 5.0, "price": 7.0, "ambience": 4.0, "speed": 4.0}, {"shop": "はしや", "user": "八代", "taste": 3.5, "portion": 5.0, "price": 9.0, "ambience": 4.0, "speed": 3.0}, {"shop": "はしや", "user": "山小瀬", "taste": 4.0, "portion": 5.0, "price": 10.0, "ambience": 4.0, "speed": 3.0}];
+
+function addLog(msg, cls='') {
+  const div = document.createElement('div');
+  div.className = cls; div.textContent = msg;
+  document.getElementById('log').appendChild(div);
+  document.getElementById('log').scrollTop = 99999;
+}
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+window.startFix = async function() {
+  document.getElementById('startBtn').disabled = true;
+  const { collection, getDocs, doc, updateDoc } = window._fns;
+
+  addLog('Firebaseからデータ取得中...', 'info');
+  const snap = await getDocs(collection(window._db, 'reviews'));
+  const allReviews = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  addLog('取得完了: ' + allReviews.length + '件', 'info');
+
+  let updated = 0, skipped = 0, done = 0;
+  const total = CORRECT_RECORDS.length;
+
+  for (const correct of CORRECT_RECORDS) {
+    done++;
+    // FirebaseでshopNameとuserNameが一致するレビューを探す
+    const match = allReviews.find(r => {
+      const shopMatch = r.shopName && (
+        r.shopName.includes(correct.shop) || correct.shop.includes(r.shopName) ||
+        r.shopName === correct.shop
+      );
+      return shopMatch && r.userName === correct.user;
+    });
+
+    if (!match) {
+      addLog('スキップ（見つからない）: ' + correct.shop + ' / ' + correct.user, 'skip');
+      skipped++;
+    } else {
+      try {
+        await updateDoc(doc(window._db, 'reviews', match.id), {
+          ratings: {
+            taste: correct.taste,
+            portion: correct.portion,
+            price: correct.price,
+            ambience: correct.ambience,
+            speed: correct.speed,
+          }
+        });
+        updated++;
+        addLog('✅ 修正: ' + correct.shop + ' / ' + correct.user +
+          ' [量:' + correct.portion + ' 値段:' + correct.price +
+          ' 雰囲気:' + correct.ambience + ' 混雑:' + correct.speed + ']', 'ok');
+      } catch(e) {
+        addLog('❌ エラー: ' + correct.shop + ' / ' + correct.user + ' - ' + e.message, 'err');
+      }
+      await sleep(50);
+    }
+
+    const pct = Math.round(done / total * 100);
+    document.getElementById('prog-bar').style.width = pct + '%';
+    document.getElementById('prog-text').textContent = done + ' / ' + total + '件処理済み';
+  }
+
+  addLog('=== 完了！更新: ' + updated + '件 / スキップ: ' + skipped + '件 ===', 'ok');
+};
+</script>
+</body>
+</html>

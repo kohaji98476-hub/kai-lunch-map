@@ -21,7 +21,7 @@
 <div class="card">
   <h2>📍 住所ベース登録ツール</h2>
   <p>住所が入力されたお店（26件）をPlaces APIで検索して登録します。</p>
-  <button id="startBtn" onclick="startImport()">登録開始</button>
+  <button id="startBtn" onclick="startImport()" disabled>読み込み中...</button>
   <div class="progress-bar"><div class="progress-fill" id="prog-bar"></div></div>
   <div id="prog-text" style="font-size:13px;color:#666;margin-bottom:8px;">待機中...</div>
   <div id="log"></div>
@@ -76,7 +76,11 @@ function searchPlace(query, svc) {
   });
 }
 
-window.initMap = async function() {};
+window.initMap = async function() {
+  const btn = document.getElementById('startBtn');
+  btn.disabled = false;
+  btn.textContent = '登録開始';
+};
 
 window.startImport = async function() {
   document.getElementById('startBtn').disabled = true;

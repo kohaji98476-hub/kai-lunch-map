@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>重複削除ツール</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: sans-serif; background: #f5f5f5; padding: 20px; }
+  .card { background: white; border-radius: 16px; padding: 24px; max-width: 700px; margin: 0 auto; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+  h2 { color: #173D8D; margin-bottom: 8px; }
+  p { color: #666; font-size: 13px; margin-bottom: 16px; line-height: 1.6; }
+  button { padding: 12px 24px; background: #173D8D; color: white; border: none; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; margin-right: 8px; }
+  button:disabled { background: #ccc; cursor: not-allowed; }
+  .progress-bar { background: #eee; border-radius: 10px; height: 12px; margin: 12px 0; }
+  .progress-fill { background: #173D8D; border-radius: 10px; height: 12px; width: 0%; transition: width 0.3s; }
+  #log { margin-top: 16px; max-height: 500px; overflow-y: auto; font-size: 12px; font-family: monospace; background: #f9f9f9; border-radius: 8px; padding: 12px; }
+  .ok { color: #4CAF50; } .err { color: #e53935; } .info { color: #173D8D; } .warn { color: #FF9800; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h2>🧹 重複削除ツール</h2>
+  <p>同じお店×同じユーザーの評価が複数ある場合、最新のものだけ残して古いものを削除します。</p>
+  <button id="checkBtn" onclick="checkDuplicates()" disabled>重複を確認中...</button>
+  <div class="progress-bar"><div class="progress-fill" id="prog-bar"></div></div>
+  <div id="prog-text" style="font-size:13px;color:#666;margin-bottom:8px;">待機中...</div>
+  <div id="log"></div>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getFirestore, collection, getDocs, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  const app = initializeApp({
+    apiKey: "AIzaSyCHIxKeZr_iA_K9XSSgteZjez7TnZIk1CM",
+    authDomain: "kai-lunch-map-d16d0.firebaseapp.com",
+    projectId: "kai-lunch-map-d16d0",
+    storageBucket: "kai-lunch-map-d16d0.firebasestorage.app",
+    messagingSenderId: "107069095031",
+    appId: "1:107069095031:web:0a107a881ae79b63dcda72",
+  });
+  const db = getFirestore(app);
+  window._db = db;
+  window._fns = { collection, getDocs, doc, deleteDoc };
+  // Firebase読み込み完了後にボタンを有効化
+  document.getElementById('checkBtn').disabled = false;
+  document.getElementById('checkBtn').textContent = '重複を確認して削除';
+</script>
+
+<script>
+function addLog(msg, cls='') {
+  const div = document.createElement('div');
+  div.className = cls; div.textContent = msg;
+  document.getElementById('log').appendChild(div);
+  document.getElementById('log').scrollTop = 99999;
+}
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+window.checkDuplicates = async function() {
+  document.getElementById('checkBtn').disabled = true;
+  const { collection, getDocs, doc, deleteDoc } = window._fns;
+
+  addLog('Firebaseからデータ取得中...', 'info');
+  const snap = await getDocs(collection(window._db, 'reviews'));
+  const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  addLog('取得完了: ' + all.length + '件', 'info');
+
+  // placeId × userName でグループ化
+  const groups = {};
+  all.forEach(r => {
+    const key = (r.placeId || '') + '___' + (r.userName || '');
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(r);
+  });
+
+  // 重複しているグループを抽出
+  const duplicates = Object.entries(groups).filter(([, list]) => list.length > 1);
+  addLog('重複グループ: ' + duplicates.length + '件', 'info');
+
+  if (duplicates.length === 0) {
+    addLog('重複はありませんでした！', 'ok');
+    return;
+  }
+
+  // 重複を表示
+  duplicates.forEach(([key, list]) => {
+    const name = list[0].shopName || '不明';
+    const user = list[0].userName || '不明';
+    addLog('⚠️ ' + name + ' / ' + user + ' → ' + list.length + '件', 'warn');
+  });
+
+  addLog('--- 古いデータを削除中 ---', 'info');
+
+  let deleted = 0;
+  let done = 0;
+  const total = duplicates.length;
+
+  for (const [key, list] of duplicates) {
+    // 最新のものを特定（updatedAt > createdAt の順）
+    list.sort((a, b) => {
+      const ta = a.updatedAt || a.createdAt || '';
+      const tb = b.updatedAt || b.createdAt || '';
+      return tb.localeCompare(ta); // 降順（新しい順）
+    });
+
+    const keep = list[0]; // 最新を残す
+    const toDelete = list.slice(1); // 古いものを削除
+
+    addLog('残す: ' + keep.shopName + ' / ' + keep.userName + ' (' + (keep.updatedAt || keep.createdAt || '日時不明') + ')', 'ok');
+
+    for (const r of toDelete) {
+      try {
+        await deleteDoc(doc(window._db, 'reviews', r.id));
+        deleted++;
+        addLog('🗑️ 削除: ' + r.shopName + ' / ' + r.userName + ' (' + (r.updatedAt || r.createdAt || '日時不明') + ')', 'info');
+      } catch(e) {
+        addLog('❌ エラー: ' + r.id + ' - ' + e.message, 'err');
+      }
+      await sleep(50);
+    }
+
+    done++;
+    document.getElementById('prog-bar').style.width = Math.round(done / total * 100) + '%';
+    document.getElementById('prog-text').textContent = done + ' / ' + total + 'グループ処理済み';
+  }
+
+  addLog('=== 完了！' + deleted + '件の重複データを削除しました ===', 'ok');
+};
+</script>
+</body>
+</html>

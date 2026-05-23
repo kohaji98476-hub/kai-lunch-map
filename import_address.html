@@ -21,11 +21,13 @@
 <div class="card">
   <h2>📍 住所ベース登録ツール</h2>
   <p>住所が入力されたお店（26件）をPlaces APIで検索して登録します。</p>
-  <button id="startBtn" onclick="startImport()" disabled>読み込み中...</button>
+  <button id="startBtn" onclick="startImport()">登録開始</button>
   <div class="progress-bar"><div class="progress-fill" id="prog-bar"></div></div>
   <div id="prog-text" style="font-size:13px;color:#666;margin-bottom:8px;">待機中...</div>
   <div id="log"></div>
 </div>
+
+<div id="map" style="width:1px;height:1px;position:fixed;top:0;left:0;"></div>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -44,8 +46,9 @@
 </script>
 
 <script>
-const RECORDS = [{"query": "東京都千代田区神田和泉町1-3-6 佐賀ふもと", "genre": "その他和食", "user": "小林", "menu": "", "taste": 4.0, "portion": 5.0, "price": 4.0, "ambience": 4.0, "speed": 3.0, "note": ""}, {"query": "東京都千代田区神田和泉町1-3-6 佐賀ふもと", "genre": "その他和食", "user": "月本", "menu": "ランチ4種コンプ済み", "taste": 4.0, "portion": 5.0, "price": 3.0, "ambience": 4.0, "speed": 3.0, "note": "夜は焼く人によってはめっちゃ塩辛い焼き鳥出てくることアリ"}, {"query": "東京都千代田区神田和泉町1-3-6 佐賀ふもと", "genre": "その他和食", "user": "八代", "menu": "ランチ4種コンプ済み", "taste": 4.5, "portion": 5.0, "price": 3.0, "ambience": 4.0, "speed": 3.0, "note": "店内雰囲気 基本良いけど新人がビクついてるのを見るといたたまれなくなる"}, {"query": "東京都千代田区神田和泉町1-3-6 佐賀ふもと", "genre": "その他和食", "user": "川野", "menu": "ランチ4種コンプ済み", "taste": 4.0, "portion": 5.0, "price": 3.5, "ambience": 3.0, "speed": 4.0, "note": "米の柔らかさが気になっているが改善方向？"}, {"query": "千代田区神田須田町2丁目12須田町2丁目共同ビル1F 雲林房", "genre": "中華料理", "user": "月本", "menu": "汁なし,あり,麻婆  33/34/24", "taste": 4.0, "portion": 4.0, "price": 3.0, "ambience": 4.0, "speed": 3.0, "note": "読み：ゆんりんぼう　うんじゃない 　辛さと痺れをカスタマイズできる"}, {"query": "千代田区神田須田町2丁目12須田町2丁目共同ビル1F 雲林房", "genre": "中華料理", "user": "八代", "menu": "汁なし24・23　麻婆丼", "taste": 4.5, "portion": 5.0, "price": 3.0, "ambience": 4.0, "speed": 3.0, "note": "2-3-4に明確な差があるので注意　麻婆うますぎる"}, {"query": "千代田区鍛冶町　2丁目１１−２０ 1 2F 神田 味坊", "genre": "中華料理", "user": "月本", "menu": "", "taste": 4.5, "portion": 5.0, "price": 3.5, "ambience": 4.0, "speed": 5.0, "note": "土日はランチメニューありません！　ラムメインで、やはり生姜焼き"}, {"query": "千代田区鍛冶町　2丁目１１−２０ 1 2F 神田 味坊", "genre": "中華料理", "user": "八代", "menu": "生姜焼き、クミン炒め", "taste": 4.5, "portion": 5.0, "price": 4.0, "ambience": 3.0, "speed": 5.0, "note": ""}, {"query": "千代田区鍛冶町　2丁目１１−２０ 1 2F 神田 味坊", "genre": "中華料理", "user": "山小瀬", "menu": "生姜焼き、クミン炒め", "taste": 3.0, "portion": 5.0, "price": 3.0, "ambience": 4.0, "speed": 5.0, "note": ""}, {"query": "千代田区神田花岡町1-1 ヨドバシakiba 8F 沖縄料理と炉端焼き なんくるないさー", "genre": "その他（和食以外）", "user": "月本", "menu": "二郎チャンプルー", "taste": 2.5, "portion": 5.0, "price": 3.0, "ambience": 3.0, "speed": 5.0, "note": "おかずのほか、ソーキそばにご飯もつく"}, {"query": "千代田区神田花岡町1-1 ヨドバシakiba 8F 沖縄料理と炉端焼き なんくるないさー", "genre": "その他（和食以外）", "user": "八代", "menu": "二郎チャンプル、タコライス", "taste": 3.0, "portion": 5.0, "price": 3.0, "ambience": 4.0, "speed": 5.0, "note": ""}, {"query": "千代田区神田花岡町1-1 ヨドバシakiba 8F 沖縄料理と炉端焼き なんくるないさー", "genre": "その他（和食以外）", "user": "山小瀬", "menu": "ゴーヤチャンプル", "taste": 3.5, "portion": 3.0, "price": 1.5, "ambience": 3.0, "speed": 5.0, "note": "ちょっと濃いめの味付けであったが美味しかった。"}, {"query": "台東区浅草橋1丁目１１−４　とんかつ藤芳 駅前店", "genre": "その他和食", "user": "月本", "menu": "", "taste": 4.5, "portion": 5.0, "price": 3.0, "ambience": 4.0, "speed": 3.0, "note": "うまいとんかつ　だけじゃない、シューマイやささみかつがよい"}, {"query": "台東区浅草橋1丁目１１−４　とんかつ藤芳 駅前店", "genre": "その他和食", "user": "八代", "menu": "", "taste": 4.0, "portion": 5.0, "price": 3.0, "ambience": 4.0, "speed": 3.0, "note": "うまいけどちょっと重ため"}, {"query": "台東区浅草橋1丁目１１−４　とんかつ藤芳 駅前店", "genre": "その他和食", "user": "山小瀬", "menu": "", "taste": 3.5, "portion": 5.0, "price": 2.5, "ambience": 3.0, "speed": 3.0, "note": "テーブルがちょっと小さ目"}, {"query": "台東区浅草橋1丁目１１−４　とんかつ藤芳 駅前店", "genre": "その他和食", "user": "臼田", "menu": "", "taste": 4.5, "portion": 4.0, "price": 3.0, "ambience": 4.0, "speed": 3.0, "note": ""}, {"query": "千代田区岩本町3丁目１−５　スミトー神田岩本町ビル1F 胡椒饅頭PAOPAO", "genre": "中華料理", "user": "月本", "menu": "", "taste": 4.0, "portion": 5.0, "price": 3.0, "ambience": 5.0, "speed": 3.0, "note": "マーボー日本カスタム　テレビ系に出がちな店"}, {"query": "千代田区岩本町3丁目１−５　スミトー神田岩本町ビル1F 胡椒饅頭PAOPAO", "genre": "中華料理", "user": "八代", "menu": "麻婆豆腐", "taste": 4.0, "portion": 5.0, "price": 3.0, "ambience": 5.0, "speed": 4.0, "note": "ユニーク　中華料理食べたくて行く店ではない　胡椒食べたくて行く店"}, {"query": "千代田区岩本町3丁目１−５　スミトー神田岩本町ビル1F 胡椒饅頭PAOPAO", "genre": "中華料理", "user": "山小瀬", "menu": "", "taste": 4.0, "portion": 3.0, "price": 2.0, "ambience": 4.0, "speed": 3.0, "note": "コショウを試しながら楽しむよさがある"}, {"query": "千代田区神田花岡町1-1 ヨドバシカメラマルチメディアakiba 8F 居酒屋革命　酔っ手羽", "genre": "その他（和食以外）", "user": "月本", "menu": "アジフライ、ユーリンチー", "taste": 3.0, "portion": 5.0, "price": 3.5, "ambience": 3.0, "speed": 5.0, "note": "激得ポイントカード、廃止された説。値段Pは10→7に。※一回200円の火力があった"}, {"query": "千代田区神田花岡町1-1 ヨドバシカメラマルチメディアakiba 8F 居酒屋革命　酔っ手羽", "genre": "その他（和食以外）", "user": "八代", "menu": "茶色いもの", "taste": 3.0, "portion": 5.0, "price": 3.5, "ambience": 3.0, "speed": 4.0, "note": "空いてる割に提供はあまり早くない印象　味も普通"}, {"query": "台東区浅草橋1丁目２４−１高政ビル２階　小料理屋すなお", "genre": "その他和食", "user": "月本", "menu": "生姜焼き　チャーハン", "taste": 4.5, "portion": 4.0, "price": 3.5, "ambience": 5.0, "speed": 3.0, "note": "食後、階段下りて外までお見送りしてくれる　圧倒的感謝"}, {"query": "台東区浅草橋1丁目２４−１高政ビル２階　小料理屋すなお", "genre": "その他和食", "user": "臼田", "menu": "", "taste": 4.5, "portion": 4.0, "price": 3.0, "ambience": 5.0, "speed": 3.0, "note": ""}, {"query": "千代田区鍛冶町2丁目１０−１０Gc神田鍛冶町ビル　鬼金棒Lab", "genre": "ラーメン", "user": "月本", "menu": "", "taste": 4.0, "portion": 3.0, "price": 1.5, "ambience": 4.0, "speed": 5.0, "note": "コンセプトがおもろいでしょ！　(未完成品食わすのか(クレーマー))"}, {"query": "千代田区鍛冶町2丁目１０−１０Gc神田鍛冶町ビル　鬼金棒Lab", "genre": "ラーメン", "user": "八代", "menu": "牛骨ラーメン", "taste": 5.0, "portion": 5.0, "price": 0.5, "ambience": 5.0, "speed": 5.0, "note": "うまい！！！ベースはマイルドだけど卓上調味料で完全に鬼金棒のシビカラになる。高い！！！"}, {"query": "千代田区鍛冶町2丁目１０−１０Gc神田鍛冶町ビル　鬼金棒Lab", "genre": "ラーメン", "user": "臼田", "menu": "", "taste": 4.0, "portion": 4.0, "price": 1.0, "ambience": 4.0, "speed": 4.0, "note": ""}];
 const OFFICE_LAT = 35.6969, OFFICE_LNG = 139.7782;
+
+const RECORDS = [{"query": "東京都千代田区神田和泉町1-3-6 佐賀ふもと", "genre": "その他和食", "user": "小林", "menu": "", "taste": 4.0, "portion": 5.0, "price": 4.0, "ambience": 4.0, "speed": 3.0, "note": ""}, {"query": "東京都千代田区神田和泉町1-3-6 佐賀ふもと", "genre": "その他和食", "user": "月本", "menu": "ランチ4種コンプ済み", "taste": 4.0, "portion": 5.0, "price": 3.0, "ambience": 4.0, "speed": 3.0, "note": "夜は焼く人によってはめっちゃ塩辛い焼き鳥出てくることアリ"}, {"query": "東京都千代田区神田和泉町1-3-6 佐賀ふもと", "genre": "その他和食", "user": "八代", "menu": "ランチ4種コンプ済み", "taste": 4.5, "portion": 5.0, "price": 3.0, "ambience": 4.0, "speed": 3.0, "note": "店内雰囲気 基本良いけど新人がビクついてるのを見るといたたまれなくなる"}, {"query": "東京都千代田区神田和泉町1-3-6 佐賀ふもと", "genre": "その他和食", "user": "川野", "menu": "ランチ4種コンプ済み", "taste": 4.0, "portion": 5.0, "price": 3.5, "ambience": 3.0, "speed": 4.0, "note": "米の柔らかさが気になっているが改善方向？"}, {"query": "千代田区神田須田町2丁目12須田町2丁目共同ビル1F 雲林房", "genre": "中華料理", "user": "月本", "menu": "汁なし,あり,麻婆  33/34/24", "taste": 4.0, "portion": 4.0, "price": 3.0, "ambience": 4.0, "speed": 3.0, "note": "読み：ゆんりんぼう　うんじゃない 　辛さと痺れをカスタマイズできる"}, {"query": "千代田区神田須田町2丁目12須田町2丁目共同ビル1F 雲林房", "genre": "中華料理", "user": "八代", "menu": "汁なし24・23　麻婆丼", "taste": 4.5, "portion": 5.0, "price": 3.0, "ambience": 4.0, "speed": 3.0, "note": "2-3-4に明確な差があるので注意　麻婆うますぎる"}, {"query": "千代田区鍛冶町　2丁目１１−２０ 1 2F 神田 味坊", "genre": "中華料理", "user": "月本", "menu": "", "taste": 4.5, "portion": 5.0, "price": 3.5, "ambience": 4.0, "speed": 5.0, "note": "土日はランチメニューありません！　ラムメインで、やはり生姜焼き"}, {"query": "千代田区鍛冶町　2丁目１１−２０ 1 2F 神田 味坊", "genre": "中華料理", "user": "八代", "menu": "生姜焼き、クミン炒め", "taste": 4.5, "portion": 5.0, "price": 4.0, "ambience": 3.0, "speed": 5.0, "note": ""}, {"query": "千代田区鍛冶町　2丁目１１−２０ 1 2F 神田 味坊", "genre": "中華料理", "user": "山小瀬", "menu": "生姜焼き、クミン炒め", "taste": 3.0, "portion": 5.0, "price": 3.0, "ambience": 4.0, "speed": 5.0, "note": ""}, {"query": "千代田区神田花岡町1-1 ヨドバシakiba 8F 沖縄料理と炉端焼き なんくるないさー", "genre": "その他（和食以外）", "user": "月本", "menu": "二郎チャンプルー", "taste": 2.5, "portion": 5.0, "price": 3.0, "ambience": 3.0, "speed": 5.0, "note": "おかずのほか、ソーキそばにご飯もつく"}, {"query": "千代田区神田花岡町1-1 ヨドバシakiba 8F 沖縄料理と炉端焼き なんくるないさー", "genre": "その他（和食以外）", "user": "八代", "menu": "二郎チャンプル、タコライス", "taste": 3.0, "portion": 5.0, "price": 3.0, "ambience": 4.0, "speed": 5.0, "note": ""}, {"query": "千代田区神田花岡町1-1 ヨドバシakiba 8F 沖縄料理と炉端焼き なんくるないさー", "genre": "その他（和食以外）", "user": "山小瀬", "menu": "ゴーヤチャンプル", "taste": 3.5, "portion": 3.0, "price": 1.5, "ambience": 3.0, "speed": 5.0, "note": "ちょっと濃いめの味付けであったが美味しかった。"}, {"query": "台東区浅草橋1丁目１１−４　とんかつ藤芳 駅前店", "genre": "その他和食", "user": "月本", "menu": "", "taste": 4.5, "portion": 5.0, "price": 3.0, "ambience": 4.0, "speed": 3.0, "note": "うまいとんかつ　だけじゃない、シューマイやささみかつがよい"}, {"query": "台東区浅草橋1丁目１１−４　とんかつ藤芳 駅前店", "genre": "その他和食", "user": "八代", "menu": "", "taste": 4.0, "portion": 5.0, "price": 3.0, "ambience": 4.0, "speed": 3.0, "note": "うまいけどちょっと重ため"}, {"query": "台東区浅草橋1丁目１１−４　とんかつ藤芳 駅前店", "genre": "その他和食", "user": "山小瀬", "menu": "", "taste": 3.5, "portion": 5.0, "price": 2.5, "ambience": 3.0, "speed": 3.0, "note": "テーブルがちょっと小さ目"}, {"query": "台東区浅草橋1丁目１１−４　とんかつ藤芳 駅前店", "genre": "その他和食", "user": "臼田", "menu": "", "taste": 4.5, "portion": 4.0, "price": 3.0, "ambience": 4.0, "speed": 3.0, "note": ""}, {"query": "千代田区岩本町3丁目１−５　スミトー神田岩本町ビル1F 胡椒饅頭PAOPAO", "genre": "中華料理", "user": "月本", "menu": "", "taste": 4.0, "portion": 5.0, "price": 3.0, "ambience": 5.0, "speed": 3.0, "note": "マーボー日本カスタム　テレビ系に出がちな店"}, {"query": "千代田区岩本町3丁目１−５　スミトー神田岩本町ビル1F 胡椒饅頭PAOPAO", "genre": "中華料理", "user": "八代", "menu": "麻婆豆腐", "taste": 4.0, "portion": 5.0, "price": 3.0, "ambience": 5.0, "speed": 4.0, "note": "ユニーク　中華料理食べたくて行く店ではない　胡椒食べたくて行く店"}, {"query": "千代田区岩本町3丁目１−５　スミトー神田岩本町ビル1F 胡椒饅頭PAOPAO", "genre": "中華料理", "user": "山小瀬", "menu": "", "taste": 4.0, "portion": 3.0, "price": 2.0, "ambience": 4.0, "speed": 3.0, "note": "コショウを試しながら楽しむよさがある"}, {"query": "千代田区神田花岡町1-1 ヨドバシカメラマルチメディアakiba 8F 居酒屋革命　酔っ手羽", "genre": "その他（和食以外）", "user": "月本", "menu": "アジフライ、ユーリンチー", "taste": 3.0, "portion": 5.0, "price": 3.5, "ambience": 3.0, "speed": 5.0, "note": "激得ポイントカード、廃止された説。値段Pは10→7に。"}, {"query": "千代田区神田花岡町1-1 ヨドバシカメラマルチメディアakiba 8F 居酒屋革命　酔っ手羽", "genre": "その他（和食以外）", "user": "八代", "menu": "茶色いもの", "taste": 3.0, "portion": 5.0, "price": 3.5, "ambience": 3.0, "speed": 4.0, "note": "空いてる割に提供はあまり早くない印象　味も普通"}, {"query": "台東区浅草橋1丁目２４−１高政ビル２階　小料理屋すなお", "genre": "その他和食", "user": "月本", "menu": "生姜焼き　チャーハン", "taste": 4.5, "portion": 4.0, "price": 3.5, "ambience": 5.0, "speed": 3.0, "note": "食後、階段下りて外までお見送りしてくれる　圧倒的感謝"}, {"query": "台東区浅草橋1丁目２４−１高政ビル２階　小料理屋すなお", "genre": "その他和食", "user": "臼田", "menu": "", "taste": 4.5, "portion": 4.0, "price": 3.0, "ambience": 5.0, "speed": 3.0, "note": ""}, {"query": "千代田区鍛冶町2丁目１０−１０Gc神田鍛冶町ビル　鬼金棒Lab", "genre": "ラーメン", "user": "月本", "menu": "", "taste": 4.0, "portion": 3.0, "price": 1.5, "ambience": 4.0, "speed": 5.0, "note": "コンセプトがおもろいでしょ！"}, {"query": "千代田区鍛冶町2丁目１０−１０Gc神田鍛冶町ビル　鬼金棒Lab", "genre": "ラーメン", "user": "八代", "menu": "牛骨ラーメン", "taste": 5.0, "portion": 5.0, "price": 0.5, "ambience": 5.0, "speed": 5.0, "note": "うまい！！！ベースはマイルドだけど卓上調味料で完全に鬼金棒のシビカラになる。高い！！！"}, {"query": "千代田区鍛冶町2丁目１０−１０Gc神田鍛冶町ビル　鬼金棒Lab", "genre": "ラーメン", "user": "臼田", "menu": "", "taste": 4.0, "portion": 4.0, "price": 1.0, "ambience": 4.0, "speed": 4.0, "note": ""}];
 
 function calcWalkMin(lat, lng) {
   const R = 6371000;
@@ -76,40 +79,31 @@ function searchPlace(query, svc) {
   });
 }
 
-window.initMap = async function() {
-  const btn = document.getElementById('startBtn');
-  btn.disabled = false;
-  btn.textContent = '登録開始';
-};
-
 window.startImport = async function() {
   document.getElementById('startBtn').disabled = true;
   const { collection, addDoc } = window._fns;
 
-  const mapDiv = document.createElement('div');
-  mapDiv.style.cssText = 'width:1px;height:1px;position:fixed;top:0;left:0;';
-  document.body.appendChild(mapDiv);
+  // Maps初期化をここで行う
   const { Map } = await google.maps.importLibrary("maps");
   const { PlacesService } = await google.maps.importLibrary("places");
-  const map = new Map(mapDiv, { center: { lat: OFFICE_LAT, lng: OFFICE_LNG }, zoom: 15 });
+  const map = new Map(document.getElementById('map'), { center: { lat: OFFICE_LAT, lng: OFFICE_LNG }, zoom: 15 });
   const svc = new PlacesService(map);
 
-  // 店名ごとにグループ化（同じqueryのお店はまとめてPlace検索）
   const shopGroups = {};
   RECORDS.forEach(r => {
     if (!shopGroups[r.query]) shopGroups[r.query] = { place: null, records: [] };
     shopGroups[r.query].records.push(r);
   });
 
-  addLog(, 'info');
+  addLog('=== お店を検索中 (' + Object.keys(shopGroups).length + '店) ===', 'info');
 
   for (const [query, group] of Object.entries(shopGroups)) {
     const place = await searchPlace(query, svc);
     if (place) {
       group.place = place;
-      addLog(, 'ok');
+      addLog('✅ 見つかった: ' + place.name, 'ok');
     } else {
-      addLog(, 'skip');
+      addLog('⚠️ 見つからない: ' + query.slice(0, 40), 'skip');
     }
     await sleep(300);
   }
@@ -122,38 +116,35 @@ window.startImport = async function() {
     for (const rec of group.records) {
       done++;
       if (!group.place) {
-        addLog(, 'skip');
+        addLog('スキップ: ' + query.slice(0,30) + ' / ' + rec.user, 'skip');
         skipped++;
       } else {
         const walkMin = calcWalkMin(group.place.lat, group.place.lng);
         try {
           await addDoc(collection(window._db, 'reviews'), {
-            placeId: group.place.placeId,
-            shopName: group.place.name,
-            shopAddress: group.place.address,
-            lat: group.place.lat, lng: group.place.lng,
+            placeId: group.place.placeId, shopName: group.place.name,
+            shopAddress: group.place.address, lat: group.place.lat, lng: group.place.lng,
             userName: rec.user,
             ratings: { taste: rec.taste, portion: rec.portion, price: rec.price, ambience: rec.ambience, speed: rec.speed },
             walkMin, genres: [rec.genre], menu: rec.menu, note: rec.note,
             createdAt: new Date().toISOString(),
           });
           saved++;
-          addLog(, 'ok');
+          addLog('✅ 登録: ' + group.place.name + ' / ' + rec.user, 'ok');
         } catch(e) {
-          addLog(, 'err');
+          addLog('❌ エラー: ' + group.place.name + ' / ' + rec.user + ': ' + e.message, 'err');
         }
         await sleep(50);
       }
       const pct = Math.round(done / total * 100);
       document.getElementById('prog-bar').style.width = pct + '%';
-      document.getElementById('prog-text').textContent = ;
+      document.getElementById('prog-text').textContent = done + ' / ' + total + '件処理済み';
     }
   }
-
-  addLog(, 'ok');
+  addLog('=== 完了！登録: ' + saved + '件 / スキップ: ' + skipped + '件 ===', 'ok');
 };
 </script>
 
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBp-ufjhkc9R3Fls-tRoGlXMAAsWGCzuxU&libraries=places&callback=initMap&loading=async" async defer></script>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBp-ufjhkc9R3Fls-tRoGlXMAAsWGCzuxU&libraries=places&loading=async"></script>
 </body>
 </html>

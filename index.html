@@ -35,6 +35,11 @@
     font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
   }
   #filter-btn.active { background: white; color: #173D8D; border-color: white; }
+  #ranking-btn {
+    background: rgba(255,255,255,0.2); border: 1.5px solid rgba(255,255,255,0.5);
+    color: white; border-radius: 20px; padding: 5px 12px;
+    font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
+  }
   #search-bar {
     display: flex; align-items: center; background: rgba(255,255,255,0.15);
     border-radius: 20px; padding: 6px 14px; gap: 8px;
@@ -191,6 +196,23 @@
   .user-review-text span { font-weight: 600; color: #888; }
   .no-reviews { text-align: center; color: #aaa; font-size: 14px; padding: 20px 0; }
 
+  /* ランキング */
+  .ranking-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 0; border-bottom: 1px solid #f0f0f0;
+  }
+  .ranking-item:last-child { border-bottom: none; }
+  .ranking-num {
+    font-size: 20px; font-weight: 900; color: #173D8D;
+    min-width: 32px; text-align: center;
+  }
+  .ranking-num.gold { color: #FFD700; }
+  .ranking-num.silver { color: #A8A8A8; }
+  .ranking-num.bronze { color: #CD7F32; }
+  .ranking-info { flex: 1; }
+  .ranking-shop { font-size: 14px; font-weight: 700; color: #333; }
+  .ranking-score { font-size: 22px; font-weight: 900; color: #173D8D; min-width: 56px; text-align: right; }
+
   #register-hint {
     display: none; background: #EEF2FA; border-top: 2px solid #A8BAE0;
     padding: 10px 16px; text-align: center; font-size: 13px; color: #173D8D; font-weight: 600;
@@ -227,6 +249,7 @@
     <h1>🍱 KAI Lunch Map</h1>
     <div id="header-right">
       <button id="filter-btn" onclick="openFilterModal()">🏷️ 絞り込む</button>
+      <button id="ranking-btn" onclick="openRankingStep1()">🏆 ランキング</button>
       <div id="mode-toggle">
         <button class="mode-btn active" id="btn-view" onclick="setMode('view')">閲覧</button>
         <button class="mode-btn" id="btn-register" onclick="setMode('register')">登録</button>
@@ -250,6 +273,75 @@
 </button>
 <div id="register-hint">📍 お店のアイコンをクリックして評価を登録・修正してください</div>
 <div id="user-badge"></div>
+
+<!-- ランキング Step1: ジャンル選択 -->
+<div class="modal-overlay" id="ranking-modal-1">
+  <div class="modal">
+    <div class="modal-header-simple">
+      <div class="modal-handle"></div>
+      <h2>🏆 ランキング (1/3)</h2>
+      <p style="margin-bottom:16px;">ジャンルを選択してください（複数選択可）</p>
+    </div>
+    <div class="modal-body" style="margin-top:16px;">
+      <div class="genre-options" id="ranking-genre-options"></div>
+      <div style="margin-top:20px;">
+        <button class="primary-btn" onclick="openRankingStep2()">次へ →</button>
+        <button class="cancel-btn" onclick="closeRankingModals()">キャンセル</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ランキング Step2: 評価項目選択 -->
+<div class="modal-overlay" id="ranking-modal-2">
+  <div class="modal">
+    <div class="modal-header-simple">
+      <div class="modal-handle"></div>
+      <h2>🏆 ランキング (2/3)</h2>
+      <p style="margin-bottom:16px;">評価項目を選択してください（複数選択可）</p>
+    </div>
+    <div class="modal-body" style="margin-top:16px;">
+      <div class="genre-options" id="ranking-item-options"></div>
+      <div style="margin-top:20px;">
+        <button class="primary-btn" onclick="openRankingStep3()">次へ →</button>
+        <button class="cancel-btn" onclick="document.getElementById('ranking-modal-2').classList.remove('open');document.getElementById('ranking-modal-1').classList.add('open');">← 戻る</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ランキング Step3: ユーザー選択 -->
+<div class="modal-overlay" id="ranking-modal-3">
+  <div class="modal">
+    <div class="modal-header-simple">
+      <div class="modal-handle"></div>
+      <h2>🏆 ランキング (3/3)</h2>
+      <p style="margin-bottom:16px;">ユーザーを選択してください</p>
+    </div>
+    <div class="modal-body" style="margin-top:16px;">
+      <div class="genre-options" id="ranking-user-options"></div>
+      <div style="margin-top:20px;">
+        <button class="primary-btn" onclick="showRanking()">ランキングを表示</button>
+        <button class="cancel-btn" onclick="document.getElementById('ranking-modal-3').classList.remove('open');document.getElementById('ranking-modal-2').classList.add('open');">← 戻る</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ランキング結果モーダル -->
+<div class="modal-overlay" id="ranking-result-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-handle"></div>
+      <div class="shop-name" id="ranking-result-title">🏆 ランキング</div>
+      <div class="shop-address" id="ranking-result-subtitle"></div>
+    </div>
+    <div class="modal-body">
+      <div id="ranking-result-list"></div>
+      <button class="cancel-btn" style="margin-top:16px;" onclick="document.getElementById('ranking-result-modal').classList.remove('open')">閉じる</button>
+    </div>
+  </div>
+</div>
 
 <!-- ジャンルフィルターモーダル -->
 <div class="modal-overlay" id="filter-modal">
@@ -616,6 +708,192 @@ function clearSearch() {
   document.getElementById('search-results').style.display = 'none';
   searchQuery = '';
   loadAndShowMarkers();
+}
+
+let rankingGenres = ['ALL'], rankingItems = [], rankingUsers = ['ALL'];
+
+const RANKING_ITEMS = [
+  { key: 'taste',    label: '🍜 味' },
+  { key: 'portion',  label: '🍚 量' },
+  { key: 'price',    label: '💰 値段' },
+  { key: 'ambience', label: '✨ 雰囲気/サービス' },
+  { key: 'speed',    label: '⏱️ 混雑度/提供速度' },
+];
+
+function openRankingStep1() {
+  rankingGenres = ['ALL']; rankingItems = []; rankingUsers = ['ALL'];
+
+  const container = document.getElementById('ranking-genre-options');
+  container.innerHTML = '';
+
+  // 全ジャンル選択肢
+  const allChip = document.createElement('div');
+  allChip.className = 'genre-chip selected';
+  allChip.dataset.val = 'ALL';
+  allChip.textContent = '🌐 全てのジャンル';
+  allChip.onclick = () => toggleRankingChip('ranking-genre-options', 'ALL', rankingGenres, true);
+  container.appendChild(allChip);
+
+  GENRES.forEach(g => {
+    const chip = document.createElement('div');
+    chip.className = 'genre-chip';
+    chip.dataset.val = g;
+    chip.textContent = g;
+    chip.onclick = () => toggleRankingChip('ranking-genre-options', g, rankingGenres, true);
+    container.appendChild(chip);
+  });
+
+  document.getElementById('ranking-modal-1').classList.add('open');
+}
+
+function openRankingStep2() {
+  if (rankingGenres.length === 0) { showToast('ジャンルを選択してください'); return; }
+  document.getElementById('ranking-modal-1').classList.remove('open');
+
+  const container = document.getElementById('ranking-item-options');
+  container.innerHTML = '';
+  rankingItems = [];
+
+  RANKING_ITEMS.forEach(item => {
+    const chip = document.createElement('div');
+    chip.className = 'genre-chip';
+    chip.dataset.val = item.key;
+    chip.textContent = item.label;
+    chip.onclick = () => toggleRankingChip('ranking-item-options', item.key, rankingItems, false);
+    container.appendChild(chip);
+  });
+
+  document.getElementById('ranking-modal-2').classList.add('open');
+}
+
+function openRankingStep3() {
+  if (rankingItems.length === 0) { showToast('評価項目を選択してください'); return; }
+  document.getElementById('ranking-modal-2').classList.remove('open');
+
+  // ユーザー一覧を動的生成
+  const users = [...new Set(allReviews.map(r => r.userName).filter(Boolean))].sort();
+  const container = document.getElementById('ranking-user-options');
+  container.innerHTML = '';
+  rankingUsers = ['ALL'];
+
+  const allChip = document.createElement('div');
+  allChip.className = 'genre-chip selected';
+  allChip.dataset.val = 'ALL';
+  allChip.textContent = '👥 全てのユーザー';
+  allChip.onclick = () => toggleRankingChip('ranking-user-options', 'ALL', rankingUsers, true);
+  container.appendChild(allChip);
+
+  users.forEach(u => {
+    const chip = document.createElement('div');
+    chip.className = 'genre-chip';
+    chip.dataset.val = u;
+    chip.textContent = '👤 ' + u;
+    chip.onclick = () => toggleRankingChip('ranking-user-options', u, rankingUsers, true);
+    container.appendChild(chip);
+  });
+
+  document.getElementById('ranking-modal-3').classList.add('open');
+}
+
+function toggleRankingChip(containerId, val, arr, hasAll) {
+  if (hasAll && val === 'ALL') {
+    arr.splice(0, arr.length, 'ALL');
+  } else {
+    const allIdx = arr.indexOf('ALL');
+    if (allIdx >= 0) arr.splice(allIdx, 1);
+    const idx = arr.indexOf(val);
+    if (idx >= 0) arr.splice(idx, 1);
+    else arr.push(val);
+    if (arr.length === 0 && hasAll) arr.push('ALL');
+  }
+  // チップのUIを更新
+  document.querySelectorAll('#' + containerId + ' .genre-chip').forEach(chip => {
+    const v = chip.dataset.val;
+    if (arr.includes('ALL')) {
+      chip.classList.toggle('selected', v === 'ALL');
+    } else {
+      chip.classList.toggle('selected', arr.includes(v));
+    }
+  });
+}
+
+function showRanking() {
+  if (rankingUsers.length === 0) { showToast('ユーザーを選択してください'); return; }
+  document.getElementById('ranking-modal-3').classList.remove('open');
+
+  // フィルタリング
+  let reviews = [...allReviews];
+
+  // ジャンルフィルター
+  if (!rankingGenres.includes('ALL')) {
+    reviews = reviews.filter(r => (r.genres || []).some(g => rankingGenres.includes(g)));
+  }
+
+  // ユーザーフィルター
+  if (!rankingUsers.includes('ALL')) {
+    reviews = reviews.filter(r => rankingUsers.includes(r.userName));
+  }
+
+  // お店ごとにグループ化して平均を計算
+  const grouped = {};
+  reviews.forEach(r => {
+    if (!grouped[r.placeId]) grouped[r.placeId] = { name: r.shopName, reviews: [] };
+    grouped[r.placeId].reviews.push(r);
+  });
+
+  const ranked = Object.values(grouped).map(shop => {
+    // 選択した評価項目の平均を計算
+    let totalScore = 0, count = 0;
+    shop.reviews.forEach(r => {
+      let itemSum = 0, itemCount = 0;
+      rankingItems.forEach(key => {
+        const v = r.ratings?.[key];
+        if (v > 0) { itemSum += v; itemCount++; }
+      });
+      if (itemCount > 0) { totalScore += itemSum / itemCount; count++; }
+    });
+    const avg = count > 0 ? totalScore / count : 0;
+    return { name: shop.name, avg, reviewCount: count };
+  }).filter(s => s.avg > 0).sort((a, b) => b.avg - a.avg);
+
+  // 結果表示
+  const itemLabels = rankingItems.map(k => RANKING_ITEMS.find(i => i.key === k)?.label || k).join('・');
+  const userLabel = rankingUsers.includes('ALL') ? '全ユーザー' : rankingUsers.join('・');
+  const genreLabel = rankingGenres.includes('ALL') ? '全ジャンル' : rankingGenres.join('・');
+
+  document.getElementById('ranking-result-title').textContent = '🏆 ランキング';
+  document.getElementById('ranking-result-subtitle').textContent = genreLabel + ' | ' + itemLabels + ' | ' + userLabel;
+
+  const list = document.getElementById('ranking-result-list');
+  if (ranked.length === 0) {
+    list.innerHTML = '<p class="no-reviews">該当するデータがありません</p>';
+  } else {
+    list.innerHTML = ranked.map((shop, i) => {
+      const numClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
+      const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1) + '位';
+      return `
+        <div class="ranking-item">
+          <div class="ranking-num ${numClass}">${medal}</div>
+          <div class="ranking-info">
+            <div class="ranking-shop">${shop.name}</div>
+            <div style="font-size:11px;color:#888;">${shop.reviewCount}件の評価</div>
+          </div>
+          <div class="ranking-score">${shop.avg.toFixed(2)}</div>
+        </div>`;
+    }).join('');
+  }
+
+  document.getElementById('ranking-result-modal').classList.add('open');
+  setTimeout(() => {
+    const modal = document.querySelector('#ranking-result-modal .modal');
+    if (modal) modal.scrollTop = 0;
+  }, 10);
+}
+
+function closeRankingModals() {
+  ['ranking-modal-1','ranking-modal-2','ranking-modal-3','ranking-result-modal'].forEach(id => {
+    document.getElementById(id).classList.remove('open');
+  });
 }
 
 function openFilterModal() {

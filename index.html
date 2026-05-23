@@ -21,7 +21,7 @@
   }
   #header-top { display: flex; align-items: center; justify-content: space-between; }
   #header h1 { font-size: 18px; font-weight: 700; }
-  #header-right { display: flex; align-items: center; gap: 8px; }
+  #header-right { display: flex; align-items: flex-end; flex-direction: column; gap: 6px; }
   #mode-toggle { display: flex; background: rgba(255,255,255,0.2); border-radius: 20px; padding: 3px; }
   .mode-btn {
     padding: 5px 14px; border-radius: 17px; border: none; cursor: pointer;
@@ -92,6 +92,7 @@
   @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 
   .modal-header {
+    position: relative;
     background: #173D8D; border-radius: 20px 20px 0 0;
     padding: 16px 24px 14px; position: sticky; top: 0; z-index: 10;
   }
@@ -106,7 +107,21 @@
 
   .modal-body { padding: 20px 24px 24px; }
 
-  .modal-header-simple { padding: 20px 24px 0; }
+  .modal-header-simple { padding: 20px 24px 0; position: relative; }
+  .modal-close-btn {
+    position: absolute; top: 12px; right: 16px;
+    background: rgba(255,255,255,0.25); border: none; color: white;
+    width: 28px; height: 28px; border-radius: 50%; font-size: 14px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    font-weight: 700;
+  }
+  .modal-close-btn-dark {
+    position: absolute; top: 16px; right: 16px;
+    background: #eee; border: none; color: #555;
+    width: 28px; height: 28px; border-radius: 50%; font-size: 14px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    font-weight: 700;
+  }
   .modal-header-simple .modal-handle { background: #ddd; margin-bottom: 16px; }
   .modal-header-simple h2 { font-size: 18px; color: #333; font-weight: 700; margin-bottom: 6px; }
   .modal-header-simple p { font-size: 13px; color: #888; }
@@ -279,6 +294,7 @@
   <div class="modal">
     <div class="modal-header-simple">
       <div class="modal-handle"></div>
+      <button class="modal-close-btn-dark" onclick="closeRankingModals()">✕</button>
       <h2>🏆 ランキング (1/3)</h2>
       <p style="margin-bottom:16px;">ジャンルを選択してください（複数選択可）</p>
     </div>
@@ -297,6 +313,7 @@
   <div class="modal">
     <div class="modal-header-simple">
       <div class="modal-handle"></div>
+      <button class="modal-close-btn-dark" onclick="closeRankingModals()">✕</button>
       <h2>🏆 ランキング (2/3)</h2>
       <p style="margin-bottom:16px;">評価項目を選択してください（複数選択可）</p>
     </div>
@@ -315,6 +332,7 @@
   <div class="modal">
     <div class="modal-header-simple">
       <div class="modal-handle"></div>
+      <button class="modal-close-btn-dark" onclick="closeRankingModals()">✕</button>
       <h2>🏆 ランキング (3/3)</h2>
       <p style="margin-bottom:16px;">ユーザーを選択してください</p>
     </div>
@@ -333,6 +351,7 @@
   <div class="modal">
     <div class="modal-header">
       <div class="modal-handle"></div>
+      <button class="modal-close-btn" onclick="document.getElementById('ranking-result-modal').classList.remove('open')">✕</button>
       <div class="shop-name" id="ranking-result-title">🏆 ランキング</div>
       <div class="shop-address" id="ranking-result-subtitle"></div>
     </div>
@@ -348,6 +367,7 @@
   <div class="modal">
     <div class="modal-header-simple">
       <div class="modal-handle"></div>
+      <button class="modal-close-btn-dark" onclick="document.getElementById('filter-modal').classList.remove('open')">✕</button>
       <h2>🏷️ ジャンルで絞り込む</h2>
       <p style="margin-bottom:16px;">表示したいジャンルを選択してください（複数選択可）</p>
     </div>
@@ -368,6 +388,7 @@
   <div class="modal">
     <div class="modal-header-simple">
       <div class="modal-handle"></div>
+      <button class="modal-close-btn-dark" onclick="document.getElementById('manual-modal').classList.remove('open')">✕</button>
       <h2>📍 お店を手動登録</h2>
       <p>地図上でタップした場所にお店を登録します</p>
     </div>
@@ -387,6 +408,7 @@
   <div class="modal">
     <div class="modal-header-simple">
       <div class="modal-handle"></div>
+      <button class="modal-close-btn-dark" onclick="cancelName()">✕</button>
       <h2>👤 名前を入力</h2>
       <p>評価に表示される名前を入力してください</p>
     </div>
@@ -406,6 +428,7 @@
   <div class="modal">
     <div class="modal-header">
       <div class="modal-handle"></div>
+      <button class="modal-close-btn" onclick="closeRegisterModal()">✕</button>
       <div class="shop-name" id="reg-shop-name"></div>
       <div class="shop-address" id="reg-shop-address"></div>
       <div id="edit-badge-wrap"></div>
@@ -424,6 +447,7 @@
   <div class="modal">
     <div class="modal-header">
       <div class="modal-handle"></div>
+      <button class="modal-close-btn" onclick="closeViewModal()">✕</button>
       <div class="shop-name" id="view-shop-name"></div>
       <div class="shop-address" id="view-shop-address"></div>
       <div class="genre-tags" id="view-genre-tags"></div>

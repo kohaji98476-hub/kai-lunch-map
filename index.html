@@ -315,10 +315,27 @@
       <div class="modal-handle"></div>
       <button class="modal-close-btn-dark" onclick="closeRankingModals()">✕</button>
       <h2>🏆 ランキング (2/3)</h2>
-      <p style="margin-bottom:16px;">評価項目を選択してください（複数選択可）</p>
+      <p style="margin-bottom:16px;">評価項目と絞り込み条件を設定してください</p>
     </div>
     <div class="modal-body" style="margin-top:16px;">
+      <div style="margin-bottom:12px;font-size:14px;font-weight:700;color:#333;">📊 評価項目（複数選択可）</div>
       <div class="genre-options" id="ranking-item-options"></div>
+      <div style="margin-top:20px;margin-bottom:12px;font-size:14px;font-weight:700;color:#333;">🚶 徒歩時間フィルター（対象外のお店を除外）</div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <label style="font-size:13px;color:#666;">下限</label>
+          <input type="number" id="ranking-walk-min" min="0" max="60" value="0"
+            style="width:70px;padding:8px;border:1.5px solid #ddd;border-radius:10px;font-size:16px;text-align:center;outline:none;" />
+          <span style="font-size:13px;color:#666;">分</span>
+        </div>
+        <span style="color:#aaa;">〜</span>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <label style="font-size:13px;color:#666;">上限</label>
+          <input type="number" id="ranking-walk-max" min="0" max="60" value="10"
+            style="width:70px;padding:8px;border:1.5px solid #ddd;border-radius:10px;font-size:16px;text-align:center;outline:none;" />
+          <span style="font-size:13px;color:#666;">分</span>
+        </div>
+      </div>
       <div style="margin-top:20px;">
         <button class="primary-btn" onclick="openRankingStep3()">次へ →</button>
         <button class="cancel-btn" onclick="document.getElementById('ranking-modal-2').classList.remove('open');document.getElementById('ranking-modal-1').classList.add('open');">← 戻る</button>
@@ -368,16 +385,31 @@
     <div class="modal-header-simple">
       <div class="modal-handle"></div>
       <button class="modal-close-btn-dark" onclick="document.getElementById('filter-modal').classList.remove('open')">✕</button>
-      <h2>🏷️ ジャンルで絞り込む</h2>
-      <p style="margin-bottom:16px;">表示したいジャンルを選択してください（複数選択可）</p>
+      <h2>🔍 絞り込む</h2>
+      <p style="margin-bottom:16px;">条件を選択してください</p>
     </div>
     <div class="modal-body" style="margin-top:16px;">
-      <div class="genre-options" id="filter-genre-options">
-        <!-- JSで生成 -->
+      <div style="margin-bottom:12px;font-size:14px;font-weight:700;color:#333;">🏷️ ジャンル（複数選択可）</div>
+      <div class="genre-options" id="filter-genre-options"></div>
+      <div style="margin-top:20px;margin-bottom:12px;font-size:14px;font-weight:700;color:#333;">🚶 徒歩時間</div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <label style="font-size:13px;color:#666;">下限</label>
+          <input type="number" id="filter-walk-min" min="0" max="60" value="0"
+            style="width:70px;padding:8px;border:1.5px solid #ddd;border-radius:10px;font-size:16px;text-align:center;outline:none;" />
+          <span style="font-size:13px;color:#666;">分</span>
+        </div>
+        <span style="color:#aaa;">〜</span>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <label style="font-size:13px;color:#666;">上限</label>
+          <input type="number" id="filter-walk-max" min="0" max="60" value="10"
+            style="width:70px;padding:8px;border:1.5px solid #ddd;border-radius:10px;font-size:16px;text-align:center;outline:none;" />
+          <span style="font-size:13px;color:#666;">分</span>
+        </div>
       </div>
       <div style="margin-top:20px;">
         <button class="primary-btn" onclick="applyFilter()">この条件で表示する</button>
-        <button class="cancel-btn" onclick="clearFilter()">すべて表示する</button>
+        <button class="cancel-btn" onclick="clearFilter()">すべてリセット</button>
       </div>
     </div>
   </div>
@@ -735,6 +767,11 @@ function clearSearch() {
 }
 
 let rankingGenres = ['ALL'], rankingItems = [], rankingUsers = ['ALL'];
+let rankingWalkMin = 0, rankingWalkMax = 10;
+
+// localStorage から徒歩時間フィルターの値を復元
+let filterWalkMin = parseInt(localStorage.getItem('filterWalkMin') ?? '0');
+let filterWalkMax = parseInt(localStorage.getItem('filterWalkMax') ?? '10');
 
 const RANKING_ITEMS = [
   { key: 'taste',    label: '🍜 味' },
@@ -843,6 +880,8 @@ function toggleRankingChip(containerId, val, arr, hasAll) {
 
 function showRanking() {
   if (rankingUsers.length === 0) { showToast('ユーザーを選択してください'); return; }
+  rankingWalkMin = parseInt(document.getElementById('ranking-walk-min').value) || 0;
+  rankingWalkMax = parseInt(document.getElementById('ranking-walk-max').value) || 10;
   document.getElementById('ranking-modal-3').classList.remove('open');
 
   // フィルタリング
@@ -857,6 +896,22 @@ function showRanking() {
   if (!rankingUsers.includes('ALL')) {
     reviews = reviews.filter(r => rankingUsers.includes(r.userName));
   }
+
+  // 徒歩時間フィルター（お店単位で平均徒歩時間を計算して絞り込む）
+  const grouped0 = {};
+  reviews.forEach(r => {
+    if (!grouped0[r.placeId]) grouped0[r.placeId] = [];
+    grouped0[r.placeId].push(r);
+  });
+  const validPlaceIds = new Set(
+    Object.entries(grouped0).filter(([, list]) => {
+      const vals = list.map(r => r.walkMin).filter(v => v != null);
+      if (vals.length === 0) return true; // 徒歩時間未登録は含める
+      const avg = vals.reduce((a,b) => a+b, 0) / vals.length;
+      return avg >= rankingWalkMin && avg <= rankingWalkMax;
+    }).map(([id]) => id)
+  );
+  reviews = reviews.filter(r => validPlaceIds.has(r.placeId));
 
   // お店ごとにグループ化して平均を計算
   const grouped = {};
@@ -884,9 +939,10 @@ function showRanking() {
   const itemLabels = rankingItems.map(k => RANKING_ITEMS.find(i => i.key === k)?.label || k).join('・');
   const userLabel = rankingUsers.includes('ALL') ? '全ユーザー' : rankingUsers.join('・');
   const genreLabel = rankingGenres.includes('ALL') ? '全ジャンル' : rankingGenres.join('・');
+  const walkLabel = `🚶${rankingWalkMin}〜${rankingWalkMax}分`;
 
   document.getElementById('ranking-result-title').textContent = '🏆 ランキング';
-  document.getElementById('ranking-result-subtitle').textContent = genreLabel + ' | ' + itemLabels + ' | ' + userLabel;
+  document.getElementById('ranking-result-subtitle').textContent = genreLabel + ' | ' + itemLabels + ' | ' + userLabel + ' | ' + walkLabel;
 
   const list = document.getElementById('ranking-result-list');
   if (ranked.length === 0) {
@@ -926,6 +982,9 @@ function openFilterModal() {
     <div class="genre-chip${filterGenres.includes(g) ? ' selected' : ''}"
          data-genre="${g}" onclick="toggleFilterGenre('${g}')">${g}</div>
   `).join('');
+  // 保存された徒歩時間を復元
+  document.getElementById('filter-walk-min').value = filterWalkMin;
+  document.getElementById('filter-walk-max').value = filterWalkMax;
   document.getElementById('filter-modal').classList.add('open');
 }
 
@@ -939,13 +998,22 @@ function toggleFilterGenre(genre) {
 }
 
 function applyFilter() {
+  filterWalkMin = parseInt(document.getElementById('filter-walk-min').value) || 0;
+  filterWalkMax = parseInt(document.getElementById('filter-walk-max').value) || 10;
+  // localStorageに保存
+  localStorage.setItem('filterWalkMin', filterWalkMin);
+  localStorage.setItem('filterWalkMax', filterWalkMax);
   document.getElementById('filter-modal').classList.remove('open');
-  document.getElementById('filter-btn').classList.toggle('active', filterGenres.length > 0);
+  const isActive = filterGenres.length > 0 || filterWalkMin > 0 || filterWalkMax < 60;
+  document.getElementById('filter-btn').classList.toggle('active', isActive);
   loadAndShowMarkers();
 }
 
 function clearFilter() {
   filterGenres.splice(0, filterGenres.length);
+  filterWalkMin = 0; filterWalkMax = 10;
+  localStorage.setItem('filterWalkMin', 0);
+  localStorage.setItem('filterWalkMax', 10);
   document.getElementById('filter-modal').classList.remove('open');
   document.getElementById('filter-btn').classList.remove('active');
   loadAndShowMarkers();
@@ -1067,6 +1135,12 @@ async function loadAndShowMarkers(forceReload = false) {
       const allGenres = data.reviews.flatMap(r => r.genres || []);
       const hasMatch = filterGenres.some(g => allGenres.includes(g));
       if (!hasMatch) continue;
+    }
+    // 徒歩時間フィルター適用
+    if (filterWalkMin > 0 || filterWalkMax < 60) {
+      const walkVals = data.reviews.map(r => r.walkMin).filter(v => v != null);
+      const avgWalk = walkVals.length ? walkVals.reduce((a,b) => a+b, 0) / walkVals.length : null;
+      if (avgWalk === null || avgWalk < filterWalkMin || avgWalk > filterWalkMax) continue;
     }
     // 検索フィルター適用
     if (searchQuery) {
